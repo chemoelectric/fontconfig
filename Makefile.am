@@ -21,6 +21,7 @@
 #  TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 #  PERFORMANCE OF THIS SOFTWARE.
 
+ACLOCAL_AMFLAGS=-I m4
 DOCSRC=@DOCSRC@
 SUBDIRS=fontconfig fc-case fc-lang fc-glyphname fc-arch src \
 	fc-cache fc-cat fc-list fc-match fc-pattern fc-query fc-scan \
