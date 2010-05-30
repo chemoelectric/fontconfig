@@ -1188,10 +1188,11 @@ FcFreeTypeQueryFace (const FT_Face  face,
      * Grub through the name table looking for family and style names.
      * FreeType makes quite a hash of them.
      *
-     * (Nonsense. FreeType is doing the right thing.
+     * (Nonsense. FreeType is doing the right thing. The hash is all
+     * fontconfig's.
      *
      * Here's the deal. We can sort by preferred platform, as here,
-     * althought it might be better to be able to select a particular
+     * although it might be better to be able to select a particular
      * platform and serve just that, because a plethora of names is
      * more complication than we need. On most Unix-like platforms the
      * Microsoft platform is appropriate and sufficient.
