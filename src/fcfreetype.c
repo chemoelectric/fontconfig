@@ -1185,9 +1185,45 @@ FcFreeTypeQueryFace (const FT_Face  face,
     if (FcDebug () & FC_DBG_SCANV)
 	printf ("\n");
     /*
-     * Grub through the name table looking for family
-     * and style names.  FreeType makes quite a hash
-     * of them
+     * Grub through the name table looking for family and style names.
+     * FreeType makes quite a hash of them.
+     *
+     * (Nonsense. FreeType is doing the right thing.
+     *
+     * Here's the deal. We can sort by preferred platform, as here,
+     * althought it might be better to be able to select a particular
+     * platform and serve just that, because a plethora of names is
+     * more complication than we need. On most Unix-like platforms the
+     * Microsoft platform is appropriate and sufficient.
+     *
+     * Similar considerations apply to language, though the need for a
+     * fallback stack is much greater than with platform.
+     *
+     * Family-Subfamily pairs are completely mishandled here. They
+     * must be retained _as pairs_ and we must retain information
+     * about _what kinds_ of pairs they are: four-style family,
+     * preferred, or WWS. It is not correct to put preferred names
+     * first, etc; this mistake is part of why GIMP makes a complete
+     * botch of complicated font families. The different kinds of
+     * family-subfamily pairs are not alternatives to each other;
+     * rather, they are different systems. An interactive program
+     * should use only one of the systems, not a pile of names with
+     * the families and subfamilies separated -- with the names _least
+     * likely_ to be supported at the top of the pile! Batch programs
+     * at least need to know family-subfamily in pairs.
+     *
+     * If fonts are not to be gathered into families, then fullnames
+     * can form another system; in that case there would be no
+     * subfamilies. This is what GIMP with its current UI probably
+     * should be doing, because it simply lists fonts rather than
+     * group them into families. Any one of the other systems would
+     * work, too.
+     *
+     * Pattern matching as such is a fine thing, but chopping up and
+     * shuffling the material before attempting to match with it is
+     * silly.
+     *
+     * -- bs, 2010.05.29)
      */
     snamec = FT_Get_Sfnt_Name_Count (face);
     for (p = 0; p <= NUM_PLATFORM_ORDER; p++)
