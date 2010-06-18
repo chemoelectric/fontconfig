@@ -1250,44 +1250,62 @@ get_preferred_family_and_style(FT_SfntName *table, int language_start, int langu
     *style = sty;
 }    
 
+#if defined(TT_NAME_ID_WWS_FAMILY) && defined(TT_NAME_ID_WWS_SUBFAMILY)
+
 static void
-get_wws_family_and_style(FT_SfntName *table, int language_start, int language_length,
-                         FcBool may_have_wws, FcBool has_wws, /* has_wws = fsSelection bit 8 */
-                         FcChar8 **family, FcChar8 **style)
+get_only_the_wws_family_and_style(FT_SfntName *table, int language_start, int language_length,
+                                  FcChar8 **family, FcChar8 **style)
 {
+    /* A question: is it supposed to be possible to have WWS style set
+     * but not the WWS family? The code below assumes that is not
+     * going to happen. */
+
     int i_family;
     int i_style;
     FcChar8 *fam;
     FcChar8 *sty;
 
-    if (may_have_wws) {
-        if (!has_wws) {
-            get_preferred_family_and_style(table, language_start, language_length, family, style);
-        } else {
-            fam = NULL;
-            sty = NULL;
-            i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_FAMILY);
-            if (0 <= i_family) {
-                fam = FcSfntNameTranscode(&table[i_family]);
-                if (fam != NULL) {
-                    i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_SUBFAMILY);
-                    if (0 <= i_style)
-                        sty = FcSfntNameTranscode(&table[i_style]);
-                    else
-                        /* There should be a subfamily entry, but, if
-                         * there is not, assume "Regular". */
-                        sty = (FcChar8 *) strdup("Regular");
-                    if (sty == NULL) {
-                        free(fam);
-                        fam = NULL;
-                    }
-                }
+    fam = NULL;
+    sty = NULL;
+    i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_FAMILY);
+    if (0 <= i_family) {
+        fam = FcSfntNameTranscode(&table[i_family]);
+        if (fam != NULL) {
+            i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_SUBFAMILY);
+            if (0 <= i_style)
+                sty = FcSfntNameTranscode(&table[i_style]);
+            if (sty == NULL) {
+                free(fam);
+                fam = NULL;
             }
-            *family = fam;
-            *style = sty;
         }
+    }
+    *family = fam;
+    *style = sty;
+}
+
+#else /* !defined(TT_NAME_ID_WWS_FAMILY) || !defined(TT_NAME_ID_WWS_SUBFAMILY) */
+
+get_only_the_wws_family_and_style(FT_SfntName *table, int language_start, int language_length,
+                                  FcChar8 **family, FcChar8 **style)
+{
+    *family = NULL;
+    *style = NULL;
+}
+
+#endif /* !defined(TT_NAME_ID_WWS_FAMILY) || !defined(TT_NAME_ID_WWS_SUBFAMILY) */
+
+
+static void
+get_wws_family_and_style(FT_SfntName *table, int language_start, int language_length,
+                         FcBool preferred_is_wws, FcChar8 **family, FcChar8 **style)
+{
+    if (preferred_is_wws) {
+        get_preferred_family_and_style(table, language_start, language_length, family, style);
     } else {
-        get_fourfont_family_and_style(table, language_start, language_length, family, style);
+        get_only_the_wws_family_and_style(table, language_start, language_length, family, style);
+        if (*style == NULL)
+            get_fourfont_family_and_style(table, language_start, language_length, family, style);
     }
 }
 
@@ -1429,8 +1447,7 @@ FcFreeTypeQueryFace (const FT_Face  face,
     FcChar8	    *style = 0;
     int		    st;
 
-    FcBool      may_have_wws;
-    FcBool      has_wws;
+    FcBool      preferred_is_wws;
 
     pat = FcPatternCreate ();
     if (!pat)
@@ -1461,13 +1478,7 @@ FcFreeTypeQueryFace (const FT_Face  face,
     if (os2 && os2->version >= 0x0001 && os2->version != 0xffff)
         foundry = FcVendorFoundry(os2->achVendID);
 
-#if defined(TT_NAME_ID_WWS_FAMILY) && defined(TT_NAME_ID_WWS_SUBFAMILY)
-    may_have_wws = os2 && 0x0004 <= os2->version && os2->version != 0xffff;
-    has_wws = may_have_wws && (os2->fsSelection & 0x100) == 0;
-#else
-    may_have_wws = FcFalse;
-    has_wws = FcFalse;
-#endif
+    preferred_is_wws = os2 && 0x0004 <= os2->version && os2->version != 0xffff && (os2->fsSelection & 0x100) != 0;
 
     if (FcDebug () & FC_DBG_SCANV)
 	printf ("\n");
@@ -1521,7 +1532,7 @@ FcFreeTypeQueryFace (const FT_Face  face,
                         goto bail1;
 
                     get_wws_family_and_style(table, language_start, language_length,
-                                             may_have_wws, has_wws, &family, &style);
+                                             preferred_is_wws, &family, &style);
                     failed = add_font_string(pat, FC_WWS_FAMILY, FC_WWS_FAMILYLANG,
                                              family, lang, &nwwsfamily, &nwwsfamily_lang);
                     if (!failed)
