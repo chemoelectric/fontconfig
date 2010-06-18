@@ -24,6 +24,7 @@
 
 /*
   Copyright © 2002-2003 by Juliusz Chroboczek
+  Copyright © 2010 Barry Schwartz
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -46,6 +47,7 @@
 
 #include "fcint.h"
 #include "fcftint.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -1086,8 +1088,6 @@ FcStringInPatternElement (FcPattern *pat, const char *elt, FcChar8 *string)
 
 /*-----------------------------------------------------------------------*/
 
-#include <assert.h>
-
 static void
 get_sfntname_table(const FT_Face face, FT_SfntName **table, int *table_length)
 {
@@ -1123,6 +1123,24 @@ span_platform(FT_SfntName *table, int table_length, int start)
     while (start + i < table_length && id == table[start + i].platform_id)
         i++;
     return i;
+}
+
+static void
+find_platform(FT_SfntName *table, int table_length, FT_UShort id,
+              int *start, int *length)
+{
+    int i;
+
+    i = 0;
+    while (i < table_length && table[i].platform_id < id)
+        i += span_platform(table, table_length, i);
+    if (i < table_length) {
+        *start = i;
+        *length = span_platform(table, table_length, i);
+    } else {
+        *start = -1;
+        *length = 0;
+    }
 }
 
 static int
@@ -1185,7 +1203,7 @@ get_fourfont_family_and_style(FT_SfntName *table, int language_start, int langua
             else
                 /* There should be a subfamily entry, but, if there is
                  * not, assume "Regular". */
-                sty = strdup("Regular");
+                sty = (FcChar8 *) strdup("Regular");
             if (sty == NULL) {
                 free(fam);
                 fam = NULL;
@@ -1221,7 +1239,7 @@ get_preferred_family_and_style(FT_SfntName *table, int language_start, int langu
             else
                 /* There should be a subfamily entry, but, if there is
                  * not, assume "Regular". */
-                sty = strdup("Regular");
+                sty = (FcChar8 *) strdup("Regular");
             if (sty == NULL) {
                 free(fam);
                 fam = NULL;
@@ -1234,7 +1252,7 @@ get_preferred_family_and_style(FT_SfntName *table, int language_start, int langu
 
 static void
 get_wws_family_and_style(FT_SfntName *table, int language_start, int language_length,
-                         FcBool has_wws, /* has_wws = fsSelection bit 8 */
+                         FcBool may_have_wws, FcBool has_wws, /* has_wws = fsSelection bit 8 */
                          FcChar8 **family, FcChar8 **style)
 {
     int i_family;
@@ -1242,37 +1260,71 @@ get_wws_family_and_style(FT_SfntName *table, int language_start, int language_le
     FcChar8 *fam;
     FcChar8 *sty;
 
-#if defined(TT_NAME_ID_WWS_FAMILY) && defined(TT_NAME_ID_WWS_SUBFAMILY)
-     if (!has_wws) {
-        get_preferred_family_and_style(table, language_start, language_length, family, style);
-    } else {
-        fam = NULL;
-        sty = NULL;
-        i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_FAMILY);
-        if (0 <= i_family) {
-            fam = FcSfntNameTranscode(&table[i_family]);
-            if (fam != NULL) {
-                i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_SUBFAMILY);
-                if (0 <= i_style)
-                    sty = FcSfntNameTranscode(&table[i_style]);
-                else
-                    /* There should be a subfamily entry, but, if there is
-                     * not, assume "Regular". */
-                    sty = strdup("Regular");
-                if (sty == NULL) {
-                    free(fam);
-                    fam = NULL;
+    if (may_have_wws) {
+        if (!has_wws) {
+            get_preferred_family_and_style(table, language_start, language_length, family, style);
+        } else {
+            fam = NULL;
+            sty = NULL;
+            i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_FAMILY);
+            if (0 <= i_family) {
+                fam = FcSfntNameTranscode(&table[i_family]);
+                if (fam != NULL) {
+                    i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_SUBFAMILY);
+                    if (0 <= i_style)
+                        sty = FcSfntNameTranscode(&table[i_style]);
+                    else
+                        /* There should be a subfamily entry, but, if
+                         * there is not, assume "Regular". */
+                        sty = (FcChar8 *) strdup("Regular");
+                    if (sty == NULL) {
+                        free(fam);
+                        fam = NULL;
+                    }
                 }
             }
+            *family = fam;
+            *style = sty;
         }
-        *family = fam;
-        *style = sty;
-     }
-#else
-     /* The preferred family and style may be WWS, but we do know that
-      * it is. Thus, use the four-font names. */
-     get_fourfont_family_and_style(table, language_start, language_length, family, style);
-#endif
+    } else {
+        get_fourfont_family_and_style(table, language_start, language_length, family, style);
+    }
+}
+
+static FcBool
+add_font_string(FcPattern *pat,
+                const char *elt, const char *eltlang,
+                FcChar8* utf8, const FcChar8 *lang,
+                int *np, int *nlangp)
+{
+    FcBool failed;
+
+    failed = FcFalse;
+    if (utf8 != NULL) {
+
+        if (FcDebug () & FC_DBG_SCANV)
+            printf ("found %s \"%s\" lang=\"%s\"\n", elt, (const char *) utf8,
+                    (lang ? (const char *) lang : (const char *) "[null]"));
+
+        if (!FcStringInPatternElement (pat, elt, utf8)) {
+            failed = !FcPatternAddString (pat, elt, utf8);
+            if (!failed) {
+
+                /* pad lang list with 'xx' to line up with elt */
+                while (!failed && *nlangp < *np) {
+                    failed = !FcPatternAddString (pat, eltlang, (FcChar8 *) "xx");
+                    if (!failed)
+                        ++*nlangp;
+                }
+
+                failed = !FcPatternAddString (pat, eltlang, lang);
+                if (!failed)
+                    ++*nlangp;
+            }
+            ++*np;
+        }
+    }
+    return failed;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -1283,6 +1335,26 @@ static const FT_UShort platform_order[] = {
     TT_PLATFORM_MACINTOSH,
 };
 #define NUM_PLATFORM_ORDER (sizeof (platform_order) / sizeof (platform_order[0]))
+
+static void
+find_best_platform(FT_SfntName *table, int table_length, int *start, int *length)
+{
+    int p;
+
+    *start = -1;
+    *length = 0;
+    p = 0;
+    while (p < NUM_PLATFORM_ORDER && *length <= 0) {
+        find_platform(table, table_length, platform_order[p], start, length);
+        p++;
+    }
+    if (*length <= 0)
+        find_platform(table, table_length, 0xffff, start, length);
+}
+
+#if 0 /* These declarations are for the other Fontconfig. They are
+       * left here temporarily to help document the differences
+       * between the two Fontconfigs. */
 
 static const FT_UShort nameid_order[] = {
 #ifdef TT_NAME_ID_WWS_FAMILY
@@ -1299,9 +1371,12 @@ static const FT_UShort nameid_order[] = {
     TT_NAME_ID_FONT_SUBFAMILY,
     TT_NAME_ID_TRADEMARK,
     TT_NAME_ID_MANUFACTURER,
-};
+}
 
 #define NUM_NAMEID_ORDER  (sizeof (nameid_order) / sizeof (nameid_order[0]))
+
+#endif /* Declarations for the other Fontconfig. */
+
 FcPattern *
 FcFreeTypeQueryFace (const FT_Face  face,
 		     const FcChar8  *file,
@@ -1338,6 +1413,14 @@ FcFreeTypeQueryFace (const FT_Face  face,
     int		    nfamily_lang = 0;
     int		    nstyle = 0;
     int		    nstyle_lang = 0;
+    int		    npreferredfamily = 0;
+    int		    npreferredfamily_lang = 0;
+    int		    npreferredstyle = 0;
+    int		    npreferredstyle_lang = 0;
+    int		    nwwsfamily = 0;
+    int		    nwwsfamily_lang = 0;
+    int		    nwwsstyle = 0;
+    int		    nwwsstyle_lang = 0;
     int		    nfullname = 0;
     int		    nfullname_lang = 0;
     int		    p, platform;
@@ -1345,6 +1428,9 @@ FcFreeTypeQueryFace (const FT_Face  face,
 
     FcChar8	    *style = 0;
     int		    st;
+
+    FcBool      may_have_wws;
+    FcBool      has_wws;
 
     pat = FcPatternCreate ();
     if (!pat)
@@ -1375,8 +1461,89 @@ FcFreeTypeQueryFace (const FT_Face  face,
     if (os2 && os2->version >= 0x0001 && os2->version != 0xffff)
         foundry = FcVendorFoundry(os2->achVendID);
 
+#if defined(TT_NAME_ID_WWS_FAMILY) && defined(TT_NAME_ID_WWS_SUBFAMILY)
+    may_have_wws = os2 && 0x0004 <= os2->version && os2->version != 0xffff;
+    has_wws = may_have_wws && (os2->fsSelection & 0x100) == 0;
+#else
+    may_have_wws = FcFalse;
+    has_wws = FcFalse;
+#endif
+
     if (FcDebug () & FC_DBG_SCANV)
 	printf ("\n");
+
+#if 1                    /* Get strings from the sfnt "name" table. */
+
+    {
+        FT_SfntName *table;
+        int table_length;
+        int platform_start;
+        int platform_length;
+        int encoding_start;
+        int encoding_length;
+        int language_start;
+        int language_length;
+        FT_UShort platform_id;
+        FcChar8 *family;
+        FcChar8 *style;
+        const FcChar8 *lang;
+        FcBool failed;
+
+        get_sfntname_table(face, &table, &table_length);
+        if (table != NULL) {
+            find_best_platform(table, table_length, &platform_start, &platform_length);
+            encoding_start = platform_start;
+            while (encoding_start < platform_start + platform_length) {
+                encoding_length = span_encoding(table, platform_start, platform_length, encoding_start);
+                language_start = encoding_start;
+                while (language_start < encoding_start + encoding_length) {
+                    lang = FcSfntNameLanguage(&table[language_start]);
+                    language_length = span_language(table, encoding_start, encoding_length, language_start);
+
+                    get_fourfont_family_and_style(table, language_start, language_length, &family, &style);
+                    failed = add_font_string(pat, FC_FAMILY, FC_FAMILYLANG, family, lang, &nfamily, &nfamily_lang);
+                    if (!failed)
+                        failed = add_font_string(pat, FC_STYLE, FC_STYLELANG, style, lang, &nstyle, &nstyle_lang);
+                    free(family);
+                    free(style);
+                    if (failed)
+                        goto bail1;
+
+                    get_preferred_family_and_style(table, language_start, language_length, &family, &style);
+                    failed = add_font_string(pat, FC_PREFERRED_FAMILY, FC_PREFERRED_FAMILYLANG,
+                                             family, lang, &npreferredfamily, &npreferredfamily_lang);
+                    if (!failed)
+                        failed = add_font_string(pat, FC_PREFERRED_STYLE, FC_PREFERRED_STYLELANG,
+                                                 style, lang, &npreferredstyle, &npreferredstyle_lang);
+                    free(family);
+                    free(style);
+                    if (failed)
+                        goto bail1;
+
+                    get_wws_family_and_style(table, language_start, language_length,
+                                             may_have_wws, has_wws, &family, &style);
+                    failed = add_font_string(pat, FC_WWS_FAMILY, FC_WWS_FAMILYLANG,
+                                             family, lang, &nwwsfamily, &nwwsfamily_lang);
+                    if (!failed)
+                        failed = add_font_string(pat, FC_WWS_STYLE, FC_WWS_STYLELANG,
+                                                 style, lang, &nwwsstyle, &nwwsstyle_lang);
+                    free(family);
+                    free(style);
+                    if (failed)
+                        goto bail1;
+
+                    language_start += language_length;
+                }
+                encoding_start += encoding_length;
+            }
+        }
+        free(table);
+    }
+
+#else  /* The way the other Fontconfig deals with font names. This
+        * dead code is retained here (for the moment) to document Crud
+        * Factory Fontconfig's changes. */
+
     /*
      * Grub through the name table looking for family and style names.
      * FreeType makes quite a hash of them.
@@ -1384,27 +1551,28 @@ FcFreeTypeQueryFace (const FT_Face  face,
      * (Nonsense. FreeType is doing the right thing. The hash is all
      * fontconfig's.
      *
-     * Here's the deal. We can sort by preferred platform, as here,
-     * although it might be better to be able to select a particular
-     * platform and serve just that, because a plethora of names is
-     * more complication than we need. On most Unix-like platforms the
-     * Microsoft platform is appropriate and sufficient.
+     * Here's the deal. First a minor issue: including names for
+     * multiple platforms might be okay, but, nevertheless, increases
+     * the opportunities for confusion. Names for a Microsoft platform
+     * are appropriate and sufficient for interactive programs on most
+     * Unix-like systems. So what one might do is try platforms,
+     * starting with Microsoft and working downwards in priority,
+     * until one platform is found in the name table; then work with
+     * that platform's entries only.
      *
-     * Similar considerations apply to language, though the need for a
-     * fallback stack is much greater than with platform.
-     *
-     * Family-Subfamily pairs are completely mishandled here. They
-     * must be retained _as pairs_ and we must retain information
-     * about _what kinds_ of pairs they are: four-style family,
-     * preferred, or WWS. It is not correct to put preferred names
-     * first, etc; this mistake is part of why GIMP makes a complete
-     * botch of complicated font families. The different kinds of
-     * family-subfamily pairs are not alternatives to each other;
-     * rather, they are different systems. An interactive program
-     * should use only one of the systems, not a pile of names with
-     * the families and subfamilies separated -- with the names _least
-     * likely_ to be supported at the top of the pile! Batch programs
-     * at least need to know family-subfamily in pairs.
+     * Now, a major issue: Family-Subfamily pairs are completely
+     * mishandled here. They must be retained _as pairs_ and we must
+     * retain information about _what kinds_ of pairs they are:
+     * four-style family, preferred, or WWS. It is not correct to put
+     * preferred names first, etc; this mistake is part of why GIMP
+     * makes a complete botch of complicated font families. The
+     * different kinds of family-subfamily pairs are not alternatives
+     * to each other; rather, they are different systems. An
+     * interactive program should use only one of the systems, not a
+     * pile of names with the families and subfamilies separated --
+     * with the names _least likely_ to be supported at the top of the
+     * pile! Batch programs at least need to know family-subfamily in
+     * pairs.
      *
      * If fonts are not to be gathered into families, then fullnames
      * can form another system; in that case there would be no
@@ -1564,6 +1732,7 @@ FcFreeTypeQueryFace (const FT_Face  face,
 	    }
 	}
     }
+#endif  /* The other Fontconfig's code. */
 
     if (!nfamily && face->family_name &&
 	FcStrCmpIgnoreBlanksAndCase ((FcChar8 *) face->family_name, (FcChar8 *) "") != 0)

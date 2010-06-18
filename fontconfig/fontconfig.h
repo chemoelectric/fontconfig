@@ -21,6 +21,27 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+/*
+  Copyright © 2010 Barry Schwartz
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
 
 #ifndef _FONTCONFIG_H_
 #define _FONTCONFIG_H_
@@ -64,15 +85,21 @@ typedef int		FcBool;
  * Change this value whenever the disk format for the cache file
  * changes in any non-compatible way.  Try to avoid such changes as
  * it means multiple copies of the font information.
+ *
+ * For Crud Factory Fontconfig, the version includes the string "cf".
  */
 
-#define FC_CACHE_VERSION    "3"
+#define FC_CACHE_VERSION    "0cf"
 
 #define FcTrue		1
 #define FcFalse		0
 
 #define FC_FAMILY	    "family"		/* String */
 #define FC_STYLE	    "style"		/* String */
+#define FC_PREFERRED_FAMILY	    "preferredfamily"		/* String */
+#define FC_PREFERRED_STYLE	    "preferredstyle"		/* String */
+#define FC_WWS_FAMILY	    "wwsfamily"		/* String */
+#define FC_WWS_STYLE	    "wwsstyle"		/* String */
 #define FC_SLANT	    "slant"		/* Int */
 #define FC_WEIGHT	    "weight"		/* Int */
 #define FC_SIZE		    "size"		/* Double */
@@ -104,6 +131,10 @@ typedef int		FcBool;
 #define FC_FULLNAME	    "fullname"		/* String */
 #define FC_FAMILYLANG	    "familylang"	/* String RFC 3066 langs */
 #define FC_STYLELANG	    "stylelang"		/* String RFC 3066 langs */
+#define FC_PREFERRED_FAMILYLANG	    "preferredfamilylang"	/* String RFC 3066 langs */
+#define FC_PREFERRED_STYLELANG	    "preferredstylelang"		/* String RFC 3066 langs */
+#define FC_WWS_FAMILYLANG	    "wwsfamilylang"	/* String RFC 3066 langs */
+#define FC_WWS_STYLELANG	    "wwsstylelang"		/* String RFC 3066 langs */
 #define FC_FULLNAMELANG	    "fullnamelang"	/* String RFC 3066 langs */
 #define FC_CAPABILITY       "capability"	/* String */
 #define FC_FONTFORMAT	    "fontformat"	/* String */

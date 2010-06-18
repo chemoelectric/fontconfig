@@ -21,6 +21,27 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+/*
+  Copyright © 2010 Barry Schwartz
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
 
 #ifndef _FCINT_H_
 #define _FCINT_H_
@@ -837,7 +858,15 @@ FcListPatternMatchAny (const FcPattern *p,
 #define FC_EMBEDDED_BITMAP_OBJECT	39
 #define FC_DECORATIVE_OBJECT	40
 #define FC_LCD_FILTER_OBJECT	41
-#define FC_MAX_BASE_OBJECT	FC_LCD_FILTER_OBJECT
+#define FC_PREFERRED_FAMILY_OBJECT	42
+#define FC_PREFERRED_FAMILYLANG_OBJECT	43
+#define FC_PREFERRED_STYLE_OBJECT		44
+#define FC_PREFERRED_STYLELANG_OBJECT	45
+#define FC_WWS_FAMILY_OBJECT	46
+#define FC_WWS_FAMILYLANG_OBJECT	47
+#define FC_WWS_STYLE_OBJECT		48
+#define FC_WWS_STYLELANG_OBJECT	49
+#define FC_MAX_BASE_OBJECT	FC_WWS_STYLELANG_OBJECT
 
 FcPrivate FcBool
 FcNameBool (const FcChar8 *v, FcBool *result);
