@@ -43,8 +43,8 @@ type sfntname_section = {
 } with sexp
 
 type font_family_and_style = {
-  sfntname_family : string;    (* TODO: Make this a Unicode string. *)
-  sfntname_style  : string;    (* TODO: Make this a Unicode string. *)
+  sfntname_family : string;    (* TODO: Maybe make this a Unicode string. *)
+  sfntname_style  : string;    (* TODO: Maybe make this a Unicode string. *)
 } with sexp
 
 external ft_init_freetype         : unit -> unit                                = "Wrapper_FT_Init_FreeType"
@@ -91,7 +91,7 @@ sig
   val get_string     : t -> sfntname_section -> int -> int
   val family_style_4member   : t -> sfntname_section -> font_family_and_style
   val family_style_preferred : t -> sfntname_section -> font_family_and_style
-  val family_style_wws       : t -> sfntname_section -> bool -> font_family_and_style
+  val family_style_wws       : bool -> t -> sfntname_section -> font_family_and_style
 end =
 struct
   type t = sfntname array
@@ -153,6 +153,8 @@ struct
     !language_list
 
   let get_string name_table language_section name_id =
+    (* The linear search here could be replaced with a binary
+       search. *)
     let rec get i count =
       if count = 0 then
         (-1)
@@ -203,7 +205,7 @@ struct
         { sfntname_family = name_table.(family).sfntname_string;
           sfntname_style  = name_table.(style).sfntname_string }
 
-  let family_style_wws name_table language_section has_wws = (* has_wws = fsSelection bit 8 *)
+  let family_style_wws has_wws name_table language_section = (* has_wws = fsSelection bit 8 *)
     if not has_wws then
       family_style_preferred name_table language_section
     else
@@ -229,14 +231,21 @@ let main () =
   let _ =
     List.iter
       (fun plat ->
-        print_endline (Sexplib.Sexp.to_string (sexp_of_sfntname_section plat));
         let encodings = Sfnt_name_table.encodings table plat in
         (List.iter
           (fun enc ->
-            print_endline (Sexplib.Sexp.to_string (sexp_of_sfntname_section enc));
             let languages = Sfnt_name_table.languages table enc in
-            print_endline (Sexplib.Sexp.to_string (Sexplib.Conv.sexp_of_list sexp_of_sfntname_section languages));
-            print_endline "")
+            (List.iter
+               (fun lang ->
+                 let fs = Sfnt_name_table.family_style_4member table lang in
+                 print_endline (Sexplib.Sexp.to_string_hum (sexp_of_font_family_and_style fs));
+                 let fs = Sfnt_name_table.family_style_preferred table lang in
+                 print_endline (Sexplib.Sexp.to_string_hum (sexp_of_font_family_and_style fs));
+                 let fs = Sfnt_name_table.family_style_wws false table lang in
+                 print_endline (Sexplib.Sexp.to_string_hum (sexp_of_font_family_and_style fs));
+                 print_endline "";
+               )
+               languages))
           encodings))
       platforms
   in

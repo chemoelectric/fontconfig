@@ -1084,6 +1084,199 @@ FcStringInPatternElement (FcPattern *pat, const char *elt, FcChar8 *string)
     return FcFalse;
 }
 
+/*-----------------------------------------------------------------------*/
+
+#include <assert.h>
+
+static void
+get_sfntname_table(const FT_Face face, FT_SfntName **table, int *table_length)
+{
+    int len;
+    FT_SfntName *tbl;
+    int i;
+
+    *table_length = 0;
+    *table = NULL;
+
+    len = FT_Get_Sfnt_Name_Count (face);
+    tbl = malloc (sizeof (FT_SfntName) * len);
+    if (tbl != NULL) {
+        i = 0;
+        while (i < len && FT_Get_Sfnt_Name(face, i, &tbl[i]) == 0)
+            i++;
+        if (i == len) {
+            *table_length = len;
+            *table = tbl;
+        }
+    }
+}
+
+static int
+span_platform(FT_SfntName *table, int table_length, int start)
+{
+    int i;
+    FT_UShort id;
+
+    assert(start < table_length);
+    id = table[start].platform_id;
+    i = 1;
+    while (start + i < table_length && id == table[start + i].platform_id)
+        i++;
+    return i;
+}
+
+static int
+span_encoding(FT_SfntName *table, int platform_start, int platform_length, int start)
+{
+    int i;
+    FT_UShort id;
+
+    id = table[start].encoding_id;
+    i = 1;
+    while (start + i < platform_start + platform_length && id == table[start + i].encoding_id)
+        i++;
+    return i;
+}
+
+static int
+span_language(FT_SfntName *table, int encoding_start, int encoding_length, int start)
+{
+    int i;
+    FT_UShort id;
+
+    id = table[start].language_id;
+    i = 1;
+    while (start + i < encoding_start + encoding_length && id == table[start + i].language_id)
+        i++;
+    return i;
+}
+
+static int
+find_name_id(FT_SfntName *table, int language_start, int language_length, FT_UShort id)
+{
+    int i;
+
+    /* The code here does a linear search. Binary search is a possible
+     * alternative. */
+    i = 0;
+    while (i < language_length && table[language_start + i].name_id < id)
+        i++;
+    return table[language_start + i].name_id == id ? language_start + i : -1;
+}
+
+static void
+get_fourfont_family_and_style(FT_SfntName *table, int language_start, int language_length,
+                              FcChar8 **family, FcChar8 **style)
+{
+    int i_family;
+    int i_style;
+    FcChar8 *fam;
+    FcChar8 *sty;
+
+    fam = NULL;
+    sty = NULL;
+    i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_FONT_FAMILY);
+    if (0 <= i_family) {
+        fam = FcSfntNameTranscode(&table[i_family]);
+        if (fam != NULL) {
+            i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_FONT_SUBFAMILY);
+            if (0 <= i_style)
+                sty = FcSfntNameTranscode(&table[i_style]);
+            else
+                /* There should be a subfamily entry, but, if there is
+                 * not, assume "Regular". */
+                sty = strdup("Regular");
+            if (sty == NULL) {
+                free(fam);
+                fam = NULL;
+            }
+        }
+    }
+    *family = fam;
+    *style = sty;
+}
+
+static void
+get_preferred_family_and_style(FT_SfntName *table, int language_start, int language_length,
+                               FcChar8 **family, FcChar8 **style)
+{
+    int i_family;
+    int i_style;
+    FcChar8 *fam;
+    FcChar8 *sty;
+
+    fam = NULL;
+    sty = NULL;
+    i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_PREFERRED_FAMILY);
+    if (i_family < 0)
+        i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_FONT_FAMILY);
+    if (0 <= i_family) {
+        fam = FcSfntNameTranscode(&table[i_family]);
+        if (fam != NULL) {
+            i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_PREFERRED_SUBFAMILY);
+            if (i_style < 0)
+                i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_FONT_SUBFAMILY);
+            if (0 <= i_style)
+                sty = FcSfntNameTranscode(&table[i_style]);
+            else
+                /* There should be a subfamily entry, but, if there is
+                 * not, assume "Regular". */
+                sty = strdup("Regular");
+            if (sty == NULL) {
+                free(fam);
+                fam = NULL;
+            }
+        }
+    }
+    *family = fam;
+    *style = sty;
+}    
+
+static void
+get_wws_family_and_style(FT_SfntName *table, int language_start, int language_length,
+                         FcBool has_wws, /* has_wws = fsSelection bit 8 */
+                         FcChar8 **family, FcChar8 **style)
+{
+    int i_family;
+    int i_style;
+    FcChar8 *fam;
+    FcChar8 *sty;
+
+#if defined(TT_NAME_ID_WWS_FAMILY) && defined(TT_NAME_ID_WWS_SUBFAMILY)
+     if (!has_wws) {
+        get_preferred_family_and_style(table, language_start, language_length, family, style);
+    } else {
+        fam = NULL;
+        sty = NULL;
+        i_family = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_FAMILY);
+        if (0 <= i_family) {
+            fam = FcSfntNameTranscode(&table[i_family]);
+            if (fam != NULL) {
+                i_style = find_name_id(table, language_start, language_length, TT_NAME_ID_WWS_SUBFAMILY);
+                if (0 <= i_style)
+                    sty = FcSfntNameTranscode(&table[i_style]);
+                else
+                    /* There should be a subfamily entry, but, if there is
+                     * not, assume "Regular". */
+                    sty = strdup("Regular");
+                if (sty == NULL) {
+                    free(fam);
+                    fam = NULL;
+                }
+            }
+        }
+        *family = fam;
+        *style = sty;
+     }
+#else
+     /* The preferred family and style may be WWS, but we do know that
+      * it is. Thus, use the four-font names. */
+     get_fourfont_family_and_style(table, language_start, language_length, family, style);
+#endif
+}
+
+/*-----------------------------------------------------------------------*/
+
 static const FT_UShort platform_order[] = {
     TT_PLATFORM_MICROSOFT,
     TT_PLATFORM_APPLE_UNICODE,
