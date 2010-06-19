@@ -22,6 +22,28 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+  Copyright © 2010 Barry Schwartz
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
+
 #include "fcint.h"
 #include <ctype.h>
 #include <stdlib.h>
@@ -75,7 +97,15 @@ static const FcObjectType _FcBaseObjectTypes[] = {
     { FC_EMBOLDEN,	FcTypeBool },
     { FC_EMBEDDED_BITMAP,   FcTypeBool },
     { FC_DECORATIVE,	FcTypeBool },
-    { FC_LCD_FILTER,	FcTypeInteger }, /* 41 */
+    { FC_LCD_FILTER,	FcTypeInteger },
+    { FC_PREFERRED_FAMILY,	FcTypeString, },
+    { FC_PREFERRED_FAMILYLANG,	FcTypeString, },
+    { FC_PREFERRED_STYLE,		FcTypeString, },
+    { FC_PREFERRED_STYLELANG,	FcTypeString, },
+    { FC_WWS_FAMILY,	FcTypeString, },
+    { FC_WWS_FAMILYLANG,	FcTypeString, },
+    { FC_WWS_STYLE,		FcTypeString, },
+    { FC_WWS_STYLELANG,	FcTypeString, }, /* 49 */
 };
 
 #define NUM_OBJECT_TYPES    (sizeof _FcBaseObjectTypes / sizeof _FcBaseObjectTypes[0])

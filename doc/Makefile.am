@@ -83,7 +83,7 @@ DOC_FUNCS_SGML=\
 	fcstrset.sgml \
 	fcvalue.sgml
 
-man5_MANS=fonts-conf.5 
+man5_MANS=fonts-conf.5 fonts.conf.5
 man3_MANS=$(DOCMAN3)
 
 noinst_PROGRAMS=edit-sgml
@@ -133,7 +133,10 @@ fonts-conf.5: local-fontconfig-user.sgml version.sgml confdir.sgml
 	$(RM) $@
 	$(DOC2MAN) local-fontconfig-user.sgml && \
 	$(RM) manpage.*
-	
+
+fonts.conf.5:
+	echo ".so man5/fonts-conf.5" > fonts.conf.5
+
 local-fontconfig-user.sgml: fontconfig-user.sgml
 	$(LN_S) $< $@
 
