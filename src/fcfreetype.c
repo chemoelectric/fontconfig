@@ -1182,6 +1182,14 @@ find_name_id(FT_SfntName *table, int language_start, int language_length, FT_USh
     return table[language_start + i].name_id == id ? language_start + i : -1;
 }
 
+static FcChar8 *get_name_table_string(FT_SfntName *table, int language_start, int language_length, FT_UShort id)
+{
+    int i;
+
+    i = find_name_id(table, language_start, language_length, id);
+    return 0 <= i ? FcSfntNameTranscode(&table[i]) : (FcChar8 *) NULL;
+}
+
 static void
 get_fourfont_family_and_style(FT_SfntName *table, int language_start, int language_length,
                               FcChar8 **family, FcChar8 **style)
@@ -1497,6 +1505,7 @@ FcFreeTypeQueryFace (const FT_Face  face,
         FT_UShort platform_id;
         FcChar8 *family;
         FcChar8 *style;
+        FcChar8 *s;
         const FcChar8 *lang;
         FcBool failed;
 
@@ -1543,6 +1552,30 @@ FcFreeTypeQueryFace (const FT_Face  face,
                     if (failed)
                         goto bail1;
 
+                    s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_MAC_FULL_NAME);
+                    failed = add_font_string(pat, FC_FULLNAME, FC_FULLNAMELANG,
+                                             s, lang, &nfullname, &nfullname_lang);
+                    free(s);
+                    if (failed)
+                        goto bail1;
+
+                    s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_FULL_NAME);
+                    failed = add_font_string(pat, FC_FULLNAME, FC_FULLNAMELANG,
+                                             s, lang, &nfullname, &nfullname_lang);
+                    free(s);
+                    if (failed)
+                        goto bail1;
+
+                    if (foundry == NULL) {
+                        s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_TRADEMARK);
+                        if (s == NULL)
+                            s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_MANUFACTURER);
+                        if (s != NULL) {
+                            foundry = FcNoticeFoundry(s);
+                            free(s);
+                        }
+                    }
+                        
                     language_start += language_length;
                 }
                 encoding_start += encoding_length;
