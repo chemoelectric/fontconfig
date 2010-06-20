@@ -269,7 +269,7 @@ FcInitMatchers (void)
     }
 }
 
-static const FcMatcher*
+static const FcMatcher *
 FcObjectToMatcher (FcObject object)
 {
     int i;
