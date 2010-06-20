@@ -200,38 +200,73 @@ typedef struct _FcMatcher {
     int		    strong, weak;
 } FcMatcher;
 
-static const FcMatcher _FcMatchers [] = {
-    { FC_FOUNDRY_OBJECT,     FcCompareString,   0,  0 },
-    { FC_CHARSET_OBJECT,     FcCompareCharSet,  1,  1 },
-    { FC_FAMILY_OBJECT,      FcCompareFamily,   2,  4 },
-    { FC_LANG_OBJECT,        FcCompareLang,     3,  3 },
-    { FC_SPACING_OBJECT,     FcCompareNumber,	5,  5 },
-    { FC_PIXEL_SIZE_OBJECT,  FcCompareSize,     6,  6 },
-    { FC_STYLE_OBJECT,       FcCompareString,   7,  7 },
-    { FC_SLANT_OBJECT,       FcCompareNumber,   8,  8 },
-    { FC_WEIGHT_OBJECT,      FcCompareNumber,   9,  9 },
-    { FC_WIDTH_OBJECT,       FcCompareNumber,  10, 10 },
-    { FC_DECORATIVE_OBJECT,  FcCompareBool,    11, 11 },
-    { FC_ANTIALIAS_OBJECT,   FcCompareBool,    12, 12 },
-    { FC_RASTERIZER_OBJECT,  FcCompareString,  13, 13 },
-    { FC_OUTLINE_OBJECT,     FcCompareBool,    14, 14 },
-    { FC_FONTVERSION_OBJECT, FcCompareNumber,  15, 15 },
+static const FcObject priority [] = {
+    FC_FOUNDRY_OBJECT,
+    FC_CHARSET_OBJECT,
+    FC_FAMILY_OBJECT,           /* strong */
+    FC_LANG_OBJECT,
+    FC_FAMILY_OBJECT,           /* weak */
+    FC_SPACING_OBJECT,
+    FC_PIXEL_SIZE_OBJECT,
+    FC_STYLE_OBJECT,
+    FC_SLANT_OBJECT,
+    FC_WEIGHT_OBJECT,
+    FC_WIDTH_OBJECT,
+    FC_DECORATIVE_OBJECT,
+    FC_ANTIALIAS_OBJECT,
+    FC_RASTERIZER_OBJECT,
+    FC_OUTLINE_OBJECT,
+    FC_FONTVERSION_OBJECT
 };
 
-#define NUM_MATCHERS (sizeof _FcMatchers / sizeof (FcMatcher))
-#define NUM_MATCH_VALUES 16
+static FcMatcher _FcMatchers [] = {
+    { FC_FOUNDRY_OBJECT,     FcCompareString,   -1, -1 },
+    { FC_CHARSET_OBJECT,     FcCompareCharSet,  -1, -1 },
+    { FC_FAMILY_OBJECT,      FcCompareFamily,   -1, -1 },
+    { FC_LANG_OBJECT,        FcCompareLang,     -1, -1 },
+    { FC_SPACING_OBJECT,     FcCompareNumber,   -1, -1 },
+    { FC_PIXEL_SIZE_OBJECT,  FcCompareSize,     -1, -1 },
+    { FC_STYLE_OBJECT,       FcCompareString,   -1, -1 },
+    { FC_SLANT_OBJECT,       FcCompareNumber,   -1, -1 },
+    { FC_WEIGHT_OBJECT,      FcCompareNumber,   -1, -1 },
+    { FC_WIDTH_OBJECT,       FcCompareNumber,   -1, -1 },
+    { FC_DECORATIVE_OBJECT,  FcCompareBool,     -1, -1 },
+    { FC_ANTIALIAS_OBJECT,   FcCompareBool,     -1, -1 },
+    { FC_RASTERIZER_OBJECT,  FcCompareString,   -1, -1 },
+    { FC_OUTLINE_OBJECT,     FcCompareBool,     -1, -1 },
+    { FC_FONTVERSION_OBJECT, FcCompareNumber,   -1, -1 }
+};
 
-static int matcher_index[FC_MAX_BASE_OBJECT + 1];
+#define NUM_MATCHERS (sizeof _FcMatchers / sizeof _FcMatchers[0])
+#define NUM_MATCH_VALUES (sizeof priority / sizeof priority[0])
+
+static int matcher_index [FC_MAX_BASE_OBJECT + 1];
 
 void
 FcInitMatchers (void)
 {
     int i;
+    int j;
 
     for (i = 0;  i <= FC_MAX_BASE_OBJECT;  i++)
         matcher_index[i] = -1;
+
     for (i = 0;  i < NUM_MATCHERS;  i++)
         matcher_index[_FcMatchers[i].object] = i;
+
+    for (i = 0;  i < NUM_MATCH_VALUES;  i++) {
+        j = matcher_index[priority[i]];
+        if (_FcMatchers[j].strong < 0)
+            _FcMatchers[j].strong = i;
+        else
+            _FcMatchers[j].weak = i;
+    }
+
+    for (i = 0;  i < NUM_MATCH_VALUES;  i++) {
+        j = matcher_index[priority[i]];
+        if (_FcMatchers[j].weak < 0)
+            _FcMatchers[j].weak = _FcMatchers[j].strong;
+    }
 }
 
 static const FcMatcher*
