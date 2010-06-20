@@ -201,24 +201,25 @@ typedef struct _FcMatcher {
 } FcMatcher;
 
 static const FcMatcher _FcMatchers [] = {
-    { FC_FOUNDRY_OBJECT,	FcCompareString,	0, 0 },
-    { FC_CHARSET_OBJECT,	FcCompareCharSet,	1, 1 },
-    { FC_FAMILY_OBJECT,    	FcCompareFamily,	2, 4 },
-    { FC_LANG_OBJECT,		FcCompareLang,	3, 3 },
-    { FC_SPACING_OBJECT,	FcCompareNumber,	5, 5 },
-    { FC_PIXEL_SIZE_OBJECT,	FcCompareSize,	6, 6 },
-    { FC_STYLE_OBJECT,		FcCompareString,	7, 7 },
-    { FC_SLANT_OBJECT,		FcCompareNumber,	8, 8 },
-    { FC_WEIGHT_OBJECT,		FcCompareNumber,	9, 9 },
-    { FC_WIDTH_OBJECT,		FcCompareNumber,	10, 10 },
-    { FC_DECORATIVE_OBJECT,	FcCompareBool,		11, 11 },
-    { FC_ANTIALIAS_OBJECT,	FcCompareBool,		12, 12 },
-    { FC_RASTERIZER_OBJECT,	FcCompareString,	13, 13 },
-    { FC_OUTLINE_OBJECT,	FcCompareBool,		14, 14 },
-    { FC_FONTVERSION_OBJECT,	FcCompareNumber,	15, 15 },
+    { FC_FOUNDRY_OBJECT,     FcCompareString,   0,  0 },
+    { FC_CHARSET_OBJECT,     FcCompareCharSet,  1,  1 },
+    { FC_FAMILY_OBJECT,      FcCompareFamily,   2,  4 },
+    { FC_LANG_OBJECT,        FcCompareLang,     3,  3 },
+    { FC_SPACING_OBJECT,     FcCompareNumber,	5,  5 },
+    { FC_PIXEL_SIZE_OBJECT,  FcCompareSize,     6,  6 },
+    { FC_STYLE_OBJECT,       FcCompareString,   7,  7 },
+    { FC_SLANT_OBJECT,       FcCompareNumber,   8,  8 },
+    { FC_WEIGHT_OBJECT,      FcCompareNumber,   9,  9 },
+    { FC_WIDTH_OBJECT,       FcCompareNumber,  10, 10 },
+    { FC_DECORATIVE_OBJECT,  FcCompareBool,    11, 11 },
+    { FC_ANTIALIAS_OBJECT,   FcCompareBool,    12, 12 },
+    { FC_RASTERIZER_OBJECT,  FcCompareString,  13, 13 },
+    { FC_OUTLINE_OBJECT,     FcCompareBool,    14, 14 },
+    { FC_FONTVERSION_OBJECT, FcCompareNumber,  15, 15 },
 };
 
-#define NUM_MATCH_VALUES (sizeof _FcMatchers / sizeof (FcMatcher))
+#define NUM_MATCHERS (sizeof _FcMatchers / sizeof (FcMatcher))
+#define NUM_MATCH_VALUES 16
 
 static int matcher_index[FC_MAX_BASE_OBJECT + 1];
 
@@ -227,9 +228,9 @@ FcInitMatchers (void)
 {
     int i;
 
-    for (i = 0;  i < FC_MAX_BASE_OBJECT;  i++)
+    for (i = 0;  i <= FC_MAX_BASE_OBJECT;  i++)
         matcher_index[i] = -1;
-    for (i = 0;  i < NUM_MATCH_VALUES;  i++)
+    for (i = 0;  i < NUM_MATCHERS;  i++)
         matcher_index[_FcMatchers[i].object] = i;
 }
 
