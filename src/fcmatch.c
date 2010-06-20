@@ -21,6 +21,27 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+/*
+  Copyright © 2010 Barry Schwartz
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+*/
 
 #include "fcint.h"
 #include <string.h>
@@ -179,90 +200,46 @@ typedef struct _FcMatcher {
     int		    strong, weak;
 } FcMatcher;
 
-/*
- * Order is significant, it defines the precedence of
- * each value, earlier values are more significant than
- * later values
- */
 static const FcMatcher _FcMatchers [] = {
     { FC_FOUNDRY_OBJECT,	FcCompareString,	0, 0 },
-#define MATCH_FOUNDRY	    0
     { FC_CHARSET_OBJECT,	FcCompareCharSet,	1, 1 },
-#define MATCH_CHARSET	    1
     { FC_FAMILY_OBJECT,    	FcCompareFamily,	2, 4 },
-#define MATCH_FAMILY	    2
     { FC_LANG_OBJECT,		FcCompareLang,	3, 3 },
-#define MATCH_LANG	    3
-#define MATCH_LANG_INDEX    3
     { FC_SPACING_OBJECT,	FcCompareNumber,	5, 5 },
-#define MATCH_SPACING	    4
     { FC_PIXEL_SIZE_OBJECT,	FcCompareSize,	6, 6 },
-#define MATCH_PIXEL_SIZE    5
     { FC_STYLE_OBJECT,		FcCompareString,	7, 7 },
-#define MATCH_STYLE	    6
     { FC_SLANT_OBJECT,		FcCompareNumber,	8, 8 },
-#define MATCH_SLANT	    7
     { FC_WEIGHT_OBJECT,		FcCompareNumber,	9, 9 },
-#define MATCH_WEIGHT	    8
     { FC_WIDTH_OBJECT,		FcCompareNumber,	10, 10 },
-#define MATCH_WIDTH	    9
     { FC_DECORATIVE_OBJECT,	FcCompareBool,		11, 11 },
-#define MATCH_DECORATIVE	10
     { FC_ANTIALIAS_OBJECT,	FcCompareBool,		12, 12 },
-#define MATCH_ANTIALIAS		    11
     { FC_RASTERIZER_OBJECT,	FcCompareString,	13, 13 },
-#define MATCH_RASTERIZER	    12
     { FC_OUTLINE_OBJECT,	FcCompareBool,		14, 14 },
-#define MATCH_OUTLINE		    13
     { FC_FONTVERSION_OBJECT,	FcCompareNumber,	15, 15 },
-#define MATCH_FONTVERSION	    14
 };
 
-#define NUM_MATCH_VALUES    16
+#define NUM_MATCH_VALUES (sizeof _FcMatchers / sizeof (FcMatcher))
+
+static int matcher_index[FC_MAX_BASE_OBJECT + 1];
+
+void
+FcInitMatchers (void)
+{
+    int i;
+
+    for (i = 0;  i < FC_MAX_BASE_OBJECT;  i++)
+        matcher_index[i] = -1;
+    for (i = 0;  i < NUM_MATCH_VALUES;  i++)
+        matcher_index[_FcMatchers[i].object] = i;
+}
 
 static const FcMatcher*
 FcObjectToMatcher (FcObject object)
 {
-    int 	i;
+    int i;
 
-    i = -1;
-    switch (object) {
-    case FC_FOUNDRY_OBJECT:
-	i = MATCH_FOUNDRY; break;
-    case FC_FONTVERSION_OBJECT:
-	i = MATCH_FONTVERSION; break;
-    case FC_FAMILY_OBJECT:
-	i = MATCH_FAMILY; break;
-    case FC_CHARSET_OBJECT:
-	i = MATCH_CHARSET; break;
-    case FC_ANTIALIAS_OBJECT:
-	i = MATCH_ANTIALIAS; break;
-    case FC_LANG_OBJECT:
-	i = MATCH_LANG; break;
-    case FC_SPACING_OBJECT:
-        i = MATCH_SPACING; break;
-    case FC_STYLE_OBJECT:
-        i = MATCH_STYLE; break;
-    case FC_SLANT_OBJECT:
-        i = MATCH_SLANT; break;
-    case FC_PIXEL_SIZE_OBJECT:
-	i = MATCH_PIXEL_SIZE; break;
-    case FC_WIDTH_OBJECT:
-        i = MATCH_WIDTH; break;
-    case FC_WEIGHT_OBJECT:
-        i = MATCH_WEIGHT; break;
-    case FC_RASTERIZER_OBJECT:
-	i = MATCH_RASTERIZER; break;
-    case FC_OUTLINE_OBJECT:
-	i = MATCH_OUTLINE; break;
-    case FC_DECORATIVE_OBJECT:
-	i = MATCH_DECORATIVE; break;
-    }
-
-    if (i < 0)
-	return NULL;
-
-    return _FcMatchers+i;
+    i = matcher_index[object];
+    return (0 < i) ? &_FcMatchers[i] : NULL;
 }
 
 static FcBool
@@ -749,7 +726,7 @@ FcFontSetSort (FcConfig	    *config,
 	 * If this node matches any language, go check
 	 * which ones and satisfy those entries
 	 */
-	if (nodeps[f]->score[MATCH_LANG_INDEX] < 200)
+	if (nodeps[f]->score[matcher_index[FC_LANG_OBJECT]] < 200)
 	{
 	    for (i = 0; i < nPatternLang; i++)
 	    {
@@ -779,7 +756,7 @@ FcFontSetSort (FcConfig	    *config,
 	    }
 	}
 	if (!satisfies)
-	    nodeps[f]->score[MATCH_LANG_INDEX] = 10000.0;
+	    nodeps[f]->score[matcher_index[FC_LANG_OBJECT]] = 10000.0;
     }
 
     /*

@@ -810,6 +810,9 @@ FcListPatternMatchAny (const FcPattern *p,
 
 /* fcmatch.c */
 
+FcPrivate void
+FcInitMatchers (void);
+
 /* fcname.c */
 
 /*

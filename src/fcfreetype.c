@@ -851,7 +851,7 @@ static const struct _notice_foundry FcNoticeFoundries[] = {
 #define NUM_NOTICE_FOUNDRIES	(int) (sizeof (FcNoticeFoundries) / sizeof (FcNoticeFoundries[0]))
 
 static const FcChar8 *
-FcNoticeFoundry(const FT_String *notice)
+FcNoticeFoundry (const FT_String *notice)
 {
     int i;
 
@@ -1571,7 +1571,7 @@ FcFreeTypeQueryFace (const FT_Face  face,
                         if (s == NULL)
                             s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_MANUFACTURER);
                         if (s != NULL) {
-                            foundry = FcNoticeFoundry(s);
+                            foundry = FcNoticeFoundry((FT_String *) s);
                             free(s);
                         }
                     }

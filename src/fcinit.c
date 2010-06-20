@@ -60,6 +60,7 @@ FcInitLoadConfig (void)
     FcConfig	*config;
 
     FcInitDebug ();
+    FcInitMatchers ();
     config = FcConfigCreate ();
     if (!config)
 	return FcFalse;
