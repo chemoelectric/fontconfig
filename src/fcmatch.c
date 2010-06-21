@@ -197,10 +197,9 @@ FcCompareSize (FcValue *value1, FcValue *value2)
 typedef struct _FcMatcher {
     FcObject	    object;
     double	    (*compare) (FcValue *value1, FcValue *value2);
-    int		    strong, weak;
 } FcMatcher;
 
-static const FcObject priority [] = {
+static FcObject default_priority_order [] = {
     FC_FOUNDRY_OBJECT,
     FC_CHARSET_OBJECT,
     FC_FAMILY_OBJECT,           /* strong */
@@ -220,25 +219,26 @@ static const FcObject priority [] = {
 };
 
 static FcMatcher _FcMatchers [] = {
-    { FC_FOUNDRY_OBJECT,     FcCompareString,   -1, -1 },
-    { FC_CHARSET_OBJECT,     FcCompareCharSet,  -1, -1 },
-    { FC_FAMILY_OBJECT,      FcCompareFamily,   -1, -1 },
-    { FC_LANG_OBJECT,        FcCompareLang,     -1, -1 },
-    { FC_SPACING_OBJECT,     FcCompareNumber,   -1, -1 },
-    { FC_PIXEL_SIZE_OBJECT,  FcCompareSize,     -1, -1 },
-    { FC_STYLE_OBJECT,       FcCompareString,   -1, -1 },
-    { FC_SLANT_OBJECT,       FcCompareNumber,   -1, -1 },
-    { FC_WEIGHT_OBJECT,      FcCompareNumber,   -1, -1 },
-    { FC_WIDTH_OBJECT,       FcCompareNumber,   -1, -1 },
-    { FC_DECORATIVE_OBJECT,  FcCompareBool,     -1, -1 },
-    { FC_ANTIALIAS_OBJECT,   FcCompareBool,     -1, -1 },
-    { FC_RASTERIZER_OBJECT,  FcCompareString,   -1, -1 },
-    { FC_OUTLINE_OBJECT,     FcCompareBool,     -1, -1 },
-    { FC_FONTVERSION_OBJECT, FcCompareNumber,   -1, -1 }
+    { FC_FOUNDRY_OBJECT,     FcCompareString },
+    { FC_CHARSET_OBJECT,     FcCompareCharSet },
+    { FC_FAMILY_OBJECT,      FcCompareFamily },
+    { FC_LANG_OBJECT,        FcCompareLang },
+    { FC_SPACING_OBJECT,     FcCompareNumber },
+    { FC_PIXEL_SIZE_OBJECT,  FcCompareSize },
+    { FC_STYLE_OBJECT,       FcCompareString },
+    { FC_SLANT_OBJECT,       FcCompareNumber },
+    { FC_WEIGHT_OBJECT,      FcCompareNumber },
+    { FC_WIDTH_OBJECT,       FcCompareNumber },
+    { FC_DECORATIVE_OBJECT,  FcCompareBool },
+    { FC_ANTIALIAS_OBJECT,   FcCompareBool },
+    { FC_RASTERIZER_OBJECT,  FcCompareString },
+    { FC_OUTLINE_OBJECT,     FcCompareBool },
+    { FC_FONTVERSION_OBJECT, FcCompareNumber  }
 };
 
-#define NUM_MATCHERS (sizeof _FcMatchers / sizeof _FcMatchers[0])
-#define NUM_MATCH_VALUES (sizeof priority / sizeof priority[0])
+#define NUM_MATCHERS             (sizeof _FcMatchers / sizeof _FcMatchers[0])
+#define DEFAULT_NUM_MATCH_VALUES (sizeof default_priority_order / sizeof default_priority_order[0])
+#define NUM_MATCH_VALUES     (2 * NUM_MATCHERS)
 
 static int matcher_index [FC_MAX_BASE_OBJECT + 1];
 
@@ -246,26 +246,42 @@ void
 FcInitMatchers (void)
 {
     int i;
-    int j;
 
     for (i = 0;  i <= FC_MAX_BASE_OBJECT;  i++)
         matcher_index[i] = -1;
 
     for (i = 0;  i < NUM_MATCHERS;  i++)
         matcher_index[_FcMatchers[i].object] = i;
+}
 
-    for (i = 0;  i < NUM_MATCH_VALUES;  i++) {
-        j = matcher_index[priority[i]];
-        if (_FcMatchers[j].strong < 0)
-            _FcMatchers[j].strong = i;
-        else
-            _FcMatchers[j].weak = i;
+void
+FcInitPriorities (FcConfig *config, FcObject *priority_order, int n)
+{
+    int i;
+    int j;
+
+    if (priority_order == NULL) {
+        priority_order = default_priority_order;
+        n = DEFAULT_NUM_MATCH_VALUES;
     }
 
-    for (i = 0;  i < NUM_MATCH_VALUES;  i++) {
-        j = matcher_index[priority[i]];
-        if (_FcMatchers[j].weak < 0)
-            _FcMatchers[j].weak = _FcMatchers[j].strong;
+    for (j = 0;  j <= FC_MAX_BASE_OBJECT;  j++) {
+        config->priorities.strong[j] = -1;
+        config->priorities.weak[j] = -1;
+    }
+
+    for (i = 0;  i < n;  i++) {
+        j = matcher_index[priority_order[i]];
+        if (config->priorities.strong[j] < 0)
+            config->priorities.strong[j] = i;
+        else
+            config->priorities.weak[j] = i;
+    }
+
+    for (i = 0;  i < n;  i++) {
+        j = matcher_index[priority_order[i]];
+        if (config->priorities.weak[j] < 0)
+            config->priorities.weak[j] = config->priorities.strong[j];
     }
 }
 
@@ -279,12 +295,13 @@ FcObjectToMatcher (FcObject object)
 }
 
 static FcBool
-FcCompareValueList (FcObject	 object,
-		    FcValueListPtr v1orig,	/* pattern */
-		    FcValueListPtr v2orig,	/* target */
-		    FcValue	*bestValue,
-		    double	*value,
-		    FcResult	*result)
+FcCompareValueList (FcConfig	 *config,
+                    FcObject	 object,
+                    FcValueListPtr v1orig,	/* pattern */
+                    FcValueListPtr v2orig,	/* target */
+                    FcValue	*bestValue,
+                    double	*value,
+                    FcResult	*result)
 {
     FcValueListPtr  v1, v2;
     double    	    v, best, bestStrong, bestWeak;
@@ -342,15 +359,15 @@ FcCompareValueList (FcObject	 object,
     }
     if (value)
     {
-	int weak    = match->weak;
-	int strong  = match->strong;
-	if (weak == strong)
-	    value[strong] += best;
-	else
-	{
-	    value[weak] += bestWeak;
-	    value[strong] += bestStrong;
-	}
+        j = matcher_index[object];
+        int weak = config->priorities.weak[j];
+        int strong = config->priorities.strong[j];
+        if (weak == strong) {
+            value[strong] += best;
+        } else {
+            value[weak] += bestWeak;
+            value[strong] += bestStrong;
+        }
     }
     return FcTrue;
 }
@@ -361,10 +378,11 @@ FcCompareValueList (FcObject	 object,
  */
 
 static FcBool
-FcCompare (FcPattern	*pat,
-	   FcPattern	*fnt,
-	   double	*value,
-	   FcResult	*result)
+FcCompare (FcConfig	*config,
+           FcPattern	*pat,
+           FcPattern	*fnt,
+           double	*value,
+           FcResult	*result)
 {
     int		    i, i1, i2;
 
@@ -385,7 +403,7 @@ FcCompare (FcPattern	*pat,
 	    i1++;
 	else
 	{
-	    if (!FcCompareValueList (elt_i1->object,
+	    if (!FcCompareValueList (config, elt_i1->object,
 				     FcPatternEltValues(elt_i1),
 				     FcPatternEltValues(elt_i2),
 				     0, value, result))
@@ -417,7 +435,7 @@ FcFontRenderPrepare (FcConfig	    *config,
 	pe = FcPatternObjectFindElt (pat, fe->object);
 	if (pe)
 	{
-	    if (!FcCompareValueList (pe->object, FcPatternEltValues(pe),
+	    if (!FcCompareValueList (config, pe->object, FcPatternEltValues(pe),
 				     FcPatternEltValues(fe), &v, 0, &result))
 	    {
 		FcPatternDestroy (new);
@@ -477,7 +495,7 @@ FcFontSetMatchInternal (FcConfig    *config,
 		printf ("Font %d ", f);
 		FcPatternPrint (s->fonts[f]);
 	    }
-	    if (!FcCompare (p, s->fonts[f], score, result))
+	    if (!FcCompare (config, p, s->fonts[f], score, result))
 		return 0;
 	    if (FcDebug () & FC_DBG_MATCHV)
 	    {
@@ -585,7 +603,7 @@ FcSortCompare (const void *aa, const void *ab)
 
     i = NUM_MATCH_VALUES;
     while (i-- && (ad = *as++) == (bd = *bs++))
-	;
+        ;
     return ad < bd ? -1 : ad > bd ? 1 : 0;
 }
 
@@ -730,7 +748,7 @@ FcFontSetSort (FcConfig	    *config,
 		FcPatternPrint (s->fonts[f]);
 	    }
 	    new->pattern = s->fonts[f];
-	    if (!FcCompare (p, new->pattern, new->score, result))
+	    if (!FcCompare (config, p, new->pattern, new->score, result))
 		goto bail1;
 	    if (FcDebug () & FC_DBG_MATCHV)
 	    {

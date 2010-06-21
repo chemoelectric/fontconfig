@@ -455,6 +455,67 @@ struct _FcBlanks {
     FcChar32	*blanks;
 };
 
+/*
+ * NOTE -- this ordering is part of the cache file format.
+ * It must also match the ordering in fcname.c
+ */
+
+#define FC_FAMILY_OBJECT	1
+#define FC_FAMILYLANG_OBJECT	2
+#define FC_STYLE_OBJECT		3
+#define FC_STYLELANG_OBJECT	4
+#define FC_FULLNAME_OBJECT	5
+#define FC_FULLNAMELANG_OBJECT	6
+#define FC_SLANT_OBJECT		7
+#define FC_WEIGHT_OBJECT	8
+#define FC_WIDTH_OBJECT		9
+#define FC_SIZE_OBJECT		10
+#define FC_ASPECT_OBJECT	11
+#define FC_PIXEL_SIZE_OBJECT	12
+#define FC_SPACING_OBJECT	13
+#define FC_FOUNDRY_OBJECT	14
+#define FC_ANTIALIAS_OBJECT	15
+#define FC_HINT_STYLE_OBJECT	16
+#define FC_HINTING_OBJECT	17
+#define FC_VERTICAL_LAYOUT_OBJECT	18
+#define FC_AUTOHINT_OBJECT	19
+#define FC_GLOBAL_ADVANCE_OBJECT	20
+#define FC_FILE_OBJECT		21
+#define FC_INDEX_OBJECT		22
+#define FC_RASTERIZER_OBJECT	23
+#define FC_OUTLINE_OBJECT	24
+#define FC_SCALABLE_OBJECT	25
+#define FC_DPI_OBJECT		26
+#define FC_RGBA_OBJECT		27
+#define FC_SCALE_OBJECT		28
+#define FC_MINSPACE_OBJECT	29
+#define FC_CHAR_WIDTH_OBJECT	30
+#define FC_CHAR_HEIGHT_OBJECT	31
+#define FC_MATRIX_OBJECT	32
+#define FC_CHARSET_OBJECT	33
+#define FC_LANG_OBJECT		34
+#define FC_FONTVERSION_OBJECT	35
+#define FC_CAPABILITY_OBJECT	36
+#define FC_FONTFORMAT_OBJECT	37
+#define FC_EMBOLDEN_OBJECT	38
+#define FC_EMBEDDED_BITMAP_OBJECT	39
+#define FC_DECORATIVE_OBJECT	40
+#define FC_LCD_FILTER_OBJECT	41
+#define FC_PREFERRED_FAMILY_OBJECT	42
+#define FC_PREFERRED_FAMILYLANG_OBJECT	43
+#define FC_PREFERRED_STYLE_OBJECT		44
+#define FC_PREFERRED_STYLELANG_OBJECT	45
+#define FC_WWS_FAMILY_OBJECT	46
+#define FC_WWS_FAMILYLANG_OBJECT	47
+#define FC_WWS_STYLE_OBJECT		48
+#define FC_WWS_STYLELANG_OBJECT	49
+#define FC_MAX_BASE_OBJECT	FC_WWS_STYLELANG_OBJECT
+
+typedef struct _FcPriorities {
+    int strong[FC_MAX_BASE_OBJECT + 1];
+    int weak[FC_MAX_BASE_OBJECT + 1];
+};
+
 struct _FcConfig {
     /*
      * File names loaded from the configuration -- saved here as the
@@ -498,6 +559,11 @@ struct _FcConfig {
     FcStrSet	*rejectGlobs;
     FcFontSet	*acceptPatterns;
     FcFontSet	*rejectPatterns;
+    /*
+     * Properties listed in priority order; a property may appear
+     * twice, indicating strong and weak bindings.
+     */
+    FcPriorities priorities;
     /*
      * The set of fonts loaded from the listed directories; the
      * order within the set does not determine the font selection,
@@ -813,63 +879,10 @@ FcListPatternMatchAny (const FcPattern *p,
 FcPrivate void
 FcInitMatchers (void);
 
+FcPrivate void
+FcInitPriorities (FcConfig *config, FcObject *priority_order, int n);
+
 /* fcname.c */
-
-/*
- * NOTE -- this ordering is part of the cache file format.
- * It must also match the ordering in fcname.c
- */
-
-#define FC_FAMILY_OBJECT	1
-#define FC_FAMILYLANG_OBJECT	2
-#define FC_STYLE_OBJECT		3
-#define FC_STYLELANG_OBJECT	4
-#define FC_FULLNAME_OBJECT	5
-#define FC_FULLNAMELANG_OBJECT	6
-#define FC_SLANT_OBJECT		7
-#define FC_WEIGHT_OBJECT	8
-#define FC_WIDTH_OBJECT		9
-#define FC_SIZE_OBJECT		10
-#define FC_ASPECT_OBJECT	11
-#define FC_PIXEL_SIZE_OBJECT	12
-#define FC_SPACING_OBJECT	13
-#define FC_FOUNDRY_OBJECT	14
-#define FC_ANTIALIAS_OBJECT	15
-#define FC_HINT_STYLE_OBJECT	16
-#define FC_HINTING_OBJECT	17
-#define FC_VERTICAL_LAYOUT_OBJECT	18
-#define FC_AUTOHINT_OBJECT	19
-#define FC_GLOBAL_ADVANCE_OBJECT	20
-#define FC_FILE_OBJECT		21
-#define FC_INDEX_OBJECT		22
-#define FC_RASTERIZER_OBJECT	23
-#define FC_OUTLINE_OBJECT	24
-#define FC_SCALABLE_OBJECT	25
-#define FC_DPI_OBJECT		26
-#define FC_RGBA_OBJECT		27
-#define FC_SCALE_OBJECT		28
-#define FC_MINSPACE_OBJECT	29
-#define FC_CHAR_WIDTH_OBJECT	30
-#define FC_CHAR_HEIGHT_OBJECT	31
-#define FC_MATRIX_OBJECT	32
-#define FC_CHARSET_OBJECT	33
-#define FC_LANG_OBJECT		34
-#define FC_FONTVERSION_OBJECT	35
-#define FC_CAPABILITY_OBJECT	36
-#define FC_FONTFORMAT_OBJECT	37
-#define FC_EMBOLDEN_OBJECT	38
-#define FC_EMBEDDED_BITMAP_OBJECT	39
-#define FC_DECORATIVE_OBJECT	40
-#define FC_LCD_FILTER_OBJECT	41
-#define FC_PREFERRED_FAMILY_OBJECT	42
-#define FC_PREFERRED_FAMILYLANG_OBJECT	43
-#define FC_PREFERRED_STYLE_OBJECT		44
-#define FC_PREFERRED_STYLELANG_OBJECT	45
-#define FC_WWS_FAMILY_OBJECT	46
-#define FC_WWS_FAMILYLANG_OBJECT	47
-#define FC_WWS_STYLE_OBJECT		48
-#define FC_WWS_STYLELANG_OBJECT	49
-#define FC_MAX_BASE_OBJECT	FC_WWS_STYLELANG_OBJECT
 
 FcPrivate FcBool
 FcNameBool (const FcChar8 *v, FcBool *result);

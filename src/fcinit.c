@@ -63,7 +63,8 @@ FcInitLoadConfig (void)
     FcInitMatchers ();
     config = FcConfigCreate ();
     if (!config)
-	return FcFalse;
+        return FcFalse;
+    FcInitPriorities (config, NULL, 0);
 
     if (!FcConfigParseAndLoad (config, 0, FcTrue))
     {

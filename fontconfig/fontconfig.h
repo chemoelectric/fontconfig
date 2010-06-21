@@ -321,6 +321,8 @@ typedef struct _FcStrSet    FcStrSet;
 
 typedef struct _FcCache	    FcCache;
 
+typedef struct _FcPriorities	    FcPriorities;
+
 _FCFUNCPROTOBEGIN
 
 /* fcblanks.c */
