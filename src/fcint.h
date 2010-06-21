@@ -511,7 +511,8 @@ struct _FcBlanks {
 #define FC_WWS_STYLELANG_OBJECT	49
 #define FC_MAX_BASE_OBJECT	FC_WWS_STYLELANG_OBJECT
 
-typedef struct _FcPriorities {
+struct _FcPriorities {
+    int n;           /* Count of values that possibly are non-zero. */
     int strong[FC_MAX_BASE_OBJECT + 1];
     int weak[FC_MAX_BASE_OBJECT + 1];
 };

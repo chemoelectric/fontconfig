@@ -236,9 +236,9 @@ static FcMatcher _FcMatchers [] = {
     { FC_FONTVERSION_OBJECT, FcCompareNumber  }
 };
 
-#define NUM_MATCHERS             (sizeof _FcMatchers / sizeof _FcMatchers[0])
-#define DEFAULT_NUM_MATCH_VALUES (sizeof default_priority_order / sizeof default_priority_order[0])
-#define NUM_MATCH_VALUES     (2 * NUM_MATCHERS)
+#define NUM_MATCHERS (sizeof _FcMatchers / sizeof _FcMatchers[0])
+#define DEFAULT_MEANINGFUL_MATCH_VALUES (sizeof default_priority_order / sizeof default_priority_order[0])
+#define NUM_MATCH_VALUES (2 * NUM_MATCHERS)
 
 static int matcher_index [FC_MAX_BASE_OBJECT + 1];
 
@@ -262,7 +262,7 @@ FcInitPriorities (FcConfig *config, FcObject *priority_order, int n)
 
     if (priority_order == NULL) {
         priority_order = default_priority_order;
-        n = DEFAULT_NUM_MATCH_VALUES;
+        n = DEFAULT_MEANINGFUL_MATCH_VALUES;
     }
 
     for (j = 0;  j <= FC_MAX_BASE_OBJECT;  j++) {
@@ -283,6 +283,8 @@ FcInitPriorities (FcConfig *config, FcObject *priority_order, int n)
         if (config->priorities.weak[j] < 0)
             config->priorities.weak[j] = config->priorities.strong[j];
     }
+
+    config->priorities.n = n;
 }
 
 static const FcMatcher *
@@ -386,7 +388,7 @@ FcCompare (FcConfig	*config,
 {
     int		    i, i1, i2;
 
-    for (i = 0; i < NUM_MATCH_VALUES; i++)
+    for (i = 0; i < config->priorities.n; i++)
 	value[i] = 0.0;
 
     i1 = 0;
@@ -475,7 +477,7 @@ FcFontSetMatchInternal (FcConfig    *config,
     int		    i;
     int		    set;
 
-    for (i = 0; i < NUM_MATCH_VALUES; i++)
+    for (i = 0; i < config->priorities.n; i++)
 	bestscore[i] = 0;
     best = 0;
     if (FcDebug () & FC_DBG_MATCH)
@@ -500,19 +502,19 @@ FcFontSetMatchInternal (FcConfig    *config,
 	    if (FcDebug () & FC_DBG_MATCHV)
 	    {
 		printf ("Score");
-		for (i = 0; i < NUM_MATCH_VALUES; i++)
+		for (i = 0; i < config->priorities.n; i++)
 		{
 		    printf (" %g", score[i]);
 		}
 		printf ("\n");
 	    }
-	    for (i = 0; i < NUM_MATCH_VALUES; i++)
+	    for (i = 0; i < config->priorities.n; i++)
 	    {
 		if (best && bestscore[i] < score[i])
 		    break;
 		if (!best || score[i] < bestscore[i])
 		{
-		    for (i = 0; i < NUM_MATCH_VALUES; i++)
+		    for (i = 0; i < config->priorities.n; i++)
 			bestscore[i] = score[i];
 		    best = s->fonts[f];
 		    break;
@@ -523,7 +525,7 @@ FcFontSetMatchInternal (FcConfig    *config,
     if (FcDebug () & FC_DBG_MATCH)
     {
 	printf ("Best score");
-	for (i = 0; i < NUM_MATCH_VALUES; i++)
+	for (i = 0; i < config->priorities.n; i++)
 	    printf (" %g", bestscore[i]);
 	printf ("\n");
 	FcPatternPrint (best);
@@ -588,6 +590,7 @@ FcFontMatch (FcConfig	*config,
 
 typedef struct _FcSortNode {
     FcPattern	*pattern;
+    int n;
     double	score[NUM_MATCH_VALUES];
 } FcSortNode;
 
@@ -601,7 +604,7 @@ FcSortCompare (const void *aa, const void *ab)
     double	ad = 0, bd = 0;
     int         i;
 
-    i = NUM_MATCH_VALUES;
+    i = a->n;
     while (i-- && (ad = *as++) == (bd = *bs++))
         ;
     return ad < bd ? -1 : ad > bd ? 1 : 0;
@@ -748,12 +751,13 @@ FcFontSetSort (FcConfig	    *config,
 		FcPatternPrint (s->fonts[f]);
 	    }
 	    new->pattern = s->fonts[f];
+        new->n = config->priorities.n;
 	    if (!FcCompare (config, p, new->pattern, new->score, result))
 		goto bail1;
 	    if (FcDebug () & FC_DBG_MATCHV)
 	    {
 		printf ("Score");
-		for (i = 0; i < NUM_MATCH_VALUES; i++)
+		for (i = 0; i < config->priorities.n; i++)
 		{
 		    printf (" %g", new->score[i]);
 		}
