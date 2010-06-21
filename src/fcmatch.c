@@ -274,7 +274,7 @@ FcInitPriorities (FcConfig *config, FcObject *priority_order, int n)
         j = matcher_index[priority_order[i]];
         if (config->priorities.strong[j] < 0)
             config->priorities.strong[j] = i;
-        else
+        else if (config->priorities.weak[j] < 0)
             config->priorities.weak[j] = i;
     }
 
@@ -784,7 +784,8 @@ FcFontSetSort (FcConfig	    *config,
 	 * If this node matches any language, go check
 	 * which ones and satisfy those entries
 	 */
-	if (nodeps[f]->score[matcher_index[FC_LANG_OBJECT]] < 200)
+    i = matcher_index[FC_LANG_OBJECT];
+	if (0 <= i && 0 <= config->priorities.strong[i] && nodeps[f]->score[config->priorities.strong[i]] < 200)
 	{
 	    for (i = 0; i < nPatternLang; i++)
 	    {
@@ -813,8 +814,11 @@ FcFontSetSort (FcConfig	    *config,
 		}
 	    }
 	}
-	if (!satisfies)
-	    nodeps[f]->score[matcher_index[FC_LANG_OBJECT]] = 10000.0;
+	if (!satisfies) {
+        i = matcher_index[FC_LANG_OBJECT];
+        if (0 <= i && 0 <= config->priorities.strong[i])
+            nodeps[f]->score[config->priorities.strong[i]] = 10000.0;
+    }
     }
 
     /*
