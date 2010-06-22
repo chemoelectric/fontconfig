@@ -1506,52 +1506,31 @@ FcParseAlias (FcConfigParse *parse)
 static void
 FcParsePriority (FcConfigParse *parse)
 {
-    FcVStack *vstack;
-    FcObject priority_order[2 * (FC_MAX_BASE_OBJECT + 1)];
-    FcObject obj;
+    FcVStack *v;
+    FcObject *priority_order;
     int n;
-    int n_bad;
     int i;
-    int j;
 
     n = FcVStackElements (parse);
-    if (2 * (FC_MAX_BASE_OBJECT + 1) < n) {
-        FcConfigMessage (parse, FcSevereWarning, "property name list truncated due to length");
-        while (2 * (FC_MAX_BASE_OBJECT + 1) < n) {
-            FcVStackPopAndDestroy (parse);
-            n--;
-        }
-    }
-
-    n_bad = 0;
-    for (i = 0;  i < n;  i++) {
-        vstack = FcVStackFetch (parse, i);
-        if (vstack->tag != FcVStackField) {
-            FcConfigMessage (parse, FcSevereWarning, "not a property name");
-            n_bad++;
-        } else {
-            obj = FcObjectFromName ((const char *) vstack->u.string);
-            if (obj <= 0 || FC_MAX_BASE_OBJECT < obj) {
-                FcConfigMessage (parse, FcSevereWarning, "unrecognized property name \"%s\"", vstack->u.string);
-                n_bad++;
+    priority_order = (FcObject *) malloc (n * sizeof (FcObject *));
+    if (priority_order == NULL) {
+		FcConfigMessage (parse, FcSevereError, "out of memory");
+    } else {
+        i = 0;
+        while (i < n) {
+            v = FcVStackFetch (parse, n - i - 1);
+            if (v->tag != FcVStackField) {
+                FcConfigMessage (parse, FcSevereError, "not a property name");
+                n = 0;
+            } else {
+                priority_order[i] = FcObjectFromName ((const char *) v->u.string);
+                i++;
             }
         }
+        FcInitPriorities (parse->config, priority_order, n);
+        free (priority_order);
     }
-
-    j = 1;
-    for (i = 0;  i < n;  i++) {
-        vstack = FcVStackPeek (parse);
-        if (vstack->tag == FcVStackField) {
-            obj = FcObjectFromName ((const char *) vstack->u.string);
-            if (0 < obj && obj <= FC_MAX_BASE_OBJECT) {
-                priority_order[n - n_bad - j] = obj;
-                j++;
-            }
-        }
-        FcVStackPopAndDestroy (parse);
-    }
-
-    FcInitPriorities (parse->config, priority_order, n - n_bad);
+    FcVStackClear (parse);
 }
 
 static FcExpr *
