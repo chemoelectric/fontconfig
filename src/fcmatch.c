@@ -240,7 +240,7 @@ static FcMatcher _FcMatchers [] = {
 #define DEFAULT_MEANINGFUL_MATCH_VALUES (sizeof default_priority_order / sizeof default_priority_order[0])
 #define NUM_MATCH_VALUES (2 * NUM_MATCHERS)
 
-static int matcher_index [FC_MAX_BASE_OBJECT + 1];
+static int matcher_index[FC_MAX_BASE_OBJECT + 1];
 
 void
 FcInitMatchers (void)

@@ -387,7 +387,7 @@ static const struct {
     { "floor",		FcElementFloor },
     { "ceil",		FcElementCeil },
     { "round",		FcElementRound },
-    { "trunc",		FcElementTrunc },
+    { "trunc",		FcElementTrunc }
 };
 #define NUM_ELEMENT_MAPS (int) (sizeof fcElementMap / sizeof fcElementMap[0])
 
@@ -1503,6 +1503,57 @@ FcParseAlias (FcConfigParse *parse)
 	FcExprDestroy (family);
 }
 
+static void
+FcParsePriority (FcConfigParse *parse)
+{
+    FcVStack *vstack;
+    FcObject priority_order[2 * (FC_MAX_BASE_OBJECT + 1)];
+    FcObject obj;
+    int n;
+    int n_bad;
+    int i;
+    int j;
+
+    n = FcVStackElements (parse);
+    if (2 * (FC_MAX_BASE_OBJECT + 1) < n) {
+        FcConfigMessage (parse, FcSevereWarning, "property name list truncated due to length");
+        while (2 * (FC_MAX_BASE_OBJECT + 1) < n) {
+            FcVStackPopAndDestroy (parse);
+            n--;
+        }
+    }
+
+    n_bad = 0;
+    for (i = 0;  i < n;  i++) {
+        vstack = FcVStackFetch (parse, i);
+        if (vstack->tag != FcVStackField) {
+            FcConfigMessage (parse, FcSevereWarning, "not a property name");
+            n_bad++;
+        } else {
+            obj = FcObjectFromName ((const char *) vstack->u.string);
+            if (obj <= 0 || FC_MAX_BASE_OBJECT < obj) {
+                FcConfigMessage (parse, FcSevereWarning, "unrecognized property name \"%s\"", vstack->u.string);
+                n_bad++;
+            }
+        }
+    }
+
+    j = 1;
+    for (i = 0;  i < n;  i++) {
+        vstack = FcVStackPeek (parse);
+        if (vstack->tag == FcVStackField) {
+            obj = FcObjectFromName ((const char *) vstack->u.string);
+            if (0 < obj && obj <= FC_MAX_BASE_OBJECT) {
+                priority_order[n - n_bad - j] = obj;
+                j++;
+            }
+        }
+        FcVStackPopAndDestroy (parse);
+    }
+
+    FcInitPriorities (parse->config, priority_order, n - n_bad);
+}
+
 static FcExpr *
 FcPopExpr (FcConfigParse *parse)
 {
@@ -2211,6 +2262,10 @@ FcEndElement(void *userData, const XML_Char *name)
 	break;
     case FcElementEdit:
 	FcParseEdit (parse);
+	break;
+
+    case FcElementPriority:
+	FcParsePriority (parse);
 	break;
 
     case FcElementInt:
