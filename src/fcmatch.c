@@ -194,6 +194,13 @@ FcCompareSize (FcValue *value1, FcValue *value2)
     return v;
 }
 
+static double
+FcCompareDefault (FcValue *value1, FcValue *value2)
+{
+    /* TODO: Make this do something more meaningful. */
+    return 0.0;
+}
+
 typedef struct _FcMatcher {
     FcObject	    object;
     double	    (*compare) (FcValue *value1, FcValue *value2);
@@ -219,21 +226,25 @@ static FcObject default_priority_order [] = {
 };
 
 static FcMatcher _FcMatchers [] = {
-    { FC_FOUNDRY_OBJECT,     FcCompareString },
-    { FC_CHARSET_OBJECT,     FcCompareCharSet },
-    { FC_FAMILY_OBJECT,      FcCompareFamily },
-    { FC_LANG_OBJECT,        FcCompareLang },
-    { FC_SPACING_OBJECT,     FcCompareNumber },
-    { FC_PIXEL_SIZE_OBJECT,  FcCompareSize },
-    { FC_STYLE_OBJECT,       FcCompareString },
-    { FC_SLANT_OBJECT,       FcCompareNumber },
-    { FC_WEIGHT_OBJECT,      FcCompareNumber },
-    { FC_WIDTH_OBJECT,       FcCompareNumber },
-    { FC_DECORATIVE_OBJECT,  FcCompareBool },
-    { FC_ANTIALIAS_OBJECT,   FcCompareBool },
-    { FC_RASTERIZER_OBJECT,  FcCompareString },
-    { FC_OUTLINE_OBJECT,     FcCompareBool },
-    { FC_FONTVERSION_OBJECT, FcCompareNumber  }
+    { FC_FOUNDRY_OBJECT,          FcCompareString },
+    { FC_CHARSET_OBJECT,          FcCompareCharSet },
+    { FC_PREFERRED_FAMILY_OBJECT, FcCompareFamily },
+    { FC_WWS_FAMILY_OBJECT,       FcCompareFamily },
+    { FC_FAMILY_OBJECT,           FcCompareFamily },
+    { FC_LANG_OBJECT,             FcCompareLang },
+    { FC_SPACING_OBJECT,          FcCompareNumber },
+    { FC_PIXEL_SIZE_OBJECT,       FcCompareSize },
+    { FC_PREFERRED_STYLE_OBJECT,  FcCompareString },
+    { FC_WWS_STYLE_OBJECT,        FcCompareString },
+    { FC_STYLE_OBJECT,            FcCompareString },
+    { FC_SLANT_OBJECT,            FcCompareNumber },
+    { FC_WEIGHT_OBJECT,           FcCompareNumber },
+    { FC_WIDTH_OBJECT,            FcCompareNumber },
+    { FC_DECORATIVE_OBJECT,       FcCompareBool },
+    { FC_ANTIALIAS_OBJECT,        FcCompareBool },
+    { FC_RASTERIZER_OBJECT,       FcCompareString },
+    { FC_OUTLINE_OBJECT,          FcCompareBool },
+    { FC_FONTVERSION_OBJECT,      FcCompareNumber  }
 };
 
 #define NUM_MATCHERS (sizeof _FcMatchers / sizeof _FcMatchers[0])
@@ -293,7 +304,7 @@ FcObjectToMatcher (FcObject object)
     int i;
 
     i = matcher_index[object];
-    return (0 < i) ? &_FcMatchers[i] : NULL;
+    return (0 < i) ? &_FcMatchers[i] : FcCompareDefault;
 }
 
 static FcBool
