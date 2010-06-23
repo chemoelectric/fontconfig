@@ -194,13 +194,6 @@ FcCompareSize (FcValue *value1, FcValue *value2)
     return v;
 }
 
-static double
-FcCompareDefault (FcValue *value1, FcValue *value2)
-{
-    /* TODO: Make this do something more meaningful. */
-    return 0.0;
-}
-
 typedef struct _FcMatcher {
     FcObject	    object;
     double	    (*compare) (FcValue *value1, FcValue *value2);
@@ -304,7 +297,7 @@ FcObjectToMatcher (FcObject object)
     int i;
 
     i = matcher_index[object];
-    return (0 < i) ? &_FcMatchers[i] : FcCompareDefault;
+    return (0 < i) ? &_FcMatchers[i] : NULL;
 }
 
 static FcBool
