@@ -67,6 +67,10 @@
 
 #include "ftglue.h"
 
+#ifdef DMALLOC
+#include "dmalloc.h"
+#endif
+
 #if HAVE_WARNING_CPP_DIRECTIVE
 #if !HAVE_FT_GET_BDF_PROPERTY
 #warning "No FT_Get_BDF_Property: Please install freetype 2.1.4 or later"
@@ -597,12 +601,12 @@ FcSfntNameTranscode (FT_SfntName *sname)
     FcChar8 *utf8;
 
     for (i = 0; i < NUM_FC_FT_ENCODING; i++)
-	if (fcFtEncoding[i].platform_id == sname->platform_id &&
-	    (fcFtEncoding[i].encoding_id == TT_ENCODING_DONT_CARE ||
-	     fcFtEncoding[i].encoding_id == sname->encoding_id))
-	    break;
+        if (fcFtEncoding[i].platform_id == sname->platform_id &&
+            (fcFtEncoding[i].encoding_id == TT_ENCODING_DONT_CARE ||
+             fcFtEncoding[i].encoding_id == sname->encoding_id))
+            break;
     if (i == NUM_FC_FT_ENCODING)
-	return 0;
+        return 0;
     fromcode = fcFtEncoding[i].fromcode;
 
     /*
@@ -610,164 +614,164 @@ FcSfntNameTranscode (FT_SfntName *sname)
      * in various ways. Kludge around them.
      */
     if (!strcmp (fromcode, FC_ENCODING_MAC_ROMAN))
-    {
-	if (sname->language_id == TT_MAC_LANGID_ENGLISH &&
-	    FcLooksLikeSJIS (sname->string, sname->string_len))
-	{
-	    fromcode = "SJIS";
-	}
-	else if (sname->language_id >= 0x100)
-	{
-	    /*
-	     * "real" Mac language IDs are all less than 150.
-	     * Names using one of the MS language IDs are assumed
-	     * to use an associated encoding (Yes, this is a kludge)
-	     */
-	    int	f;
+        {
+            if (sname->language_id == TT_MAC_LANGID_ENGLISH &&
+                FcLooksLikeSJIS (sname->string, sname->string_len))
+                {
+                    fromcode = "SJIS";
+                }
+            else if (sname->language_id >= 0x100)
+                {
+                    /*
+                     * "real" Mac language IDs are all less than 150.
+                     * Names using one of the MS language IDs are assumed
+                     * to use an associated encoding (Yes, this is a kludge)
+                     */
+                    int	f;
 
-	    fromcode = NULL;
-	    for (f = 0; f < NUM_FC_MAC_ROMAN_FAKE; f++)
-		if (fcMacRomanFake[f].language_id == sname->language_id)
-		{
-		    fromcode = fcMacRomanFake[f].fromcode;
-		    break;
-		}
-	    if (!fromcode)
-		return 0;
-	}
-    }
+                    fromcode = NULL;
+                    for (f = 0; f < NUM_FC_MAC_ROMAN_FAKE; f++)
+                        if (fcMacRomanFake[f].language_id == sname->language_id)
+                            {
+                                fromcode = fcMacRomanFake[f].fromcode;
+                                break;
+                            }
+                    if (!fromcode)
+                        return 0;
+                }
+        }
     if (!strcmp (fromcode, "UCS-2BE") || !strcmp (fromcode, "UTF-16BE"))
-    {
-	FcChar8	    *src = sname->string;
-	int	    src_len = sname->string_len;
-	int	    len;
-	int	    wchar;
-	int	    ilen, olen;
-	FcChar8	    *u8;
-	FcChar32    ucs4;
+        {
+            FcChar8	    *src = sname->string;
+            int	    src_len = sname->string_len;
+            int	    len;
+            int	    wchar;
+            int	    ilen, olen;
+            FcChar8	    *u8;
+            FcChar32    ucs4;
 	
-	/*
-	 * Convert Utf16 to Utf8
-	 */
+            /*
+             * Convert Utf16 to Utf8
+             */
 
-	if (!FcUtf16Len (src, FcEndianBig, src_len, &len, &wchar))
-	    return 0;
+            if (!FcUtf16Len (src, FcEndianBig, src_len, &len, &wchar))
+                return 0;
 
-	/*
-	 * Allocate plenty of space.  Freed below
-	 */
-	utf8 = malloc (len * FC_UTF8_MAX_LEN + 1);
-	if (!utf8)
-	    return 0;
+            /*
+             * Allocate plenty of space.  Freed below
+             */
+            utf8 = malloc (len * FC_UTF8_MAX_LEN + 1);
+            if (!utf8)
+                return 0;
 
-	u8 = utf8;
+            u8 = utf8;
 
-	while ((ilen = FcUtf16ToUcs4 (src, FcEndianBig, &ucs4, src_len)) > 0)
-	{
-	    src_len -= ilen;
-	    src += ilen;
-	    olen = FcUcs4ToUtf8 (ucs4, u8);
-	    u8 += olen;
-	}
-	*u8 = '\0';
-	goto done;
-    }
+            while ((ilen = FcUtf16ToUcs4 (src, FcEndianBig, &ucs4, src_len)) > 0)
+                {
+                    src_len -= ilen;
+                    src += ilen;
+                    olen = FcUcs4ToUtf8 (ucs4, u8);
+                    u8 += olen;
+                }
+            *u8 = '\0';
+            goto done;
+        }
     if (!strcmp (fromcode, "ASCII") || !strcmp (fromcode, "ISO-8859-1"))
-    {
-	FcChar8	    *src = sname->string;
-	int	    src_len = sname->string_len;
-	int	    olen;
-	FcChar8	    *u8;
-	FcChar32    ucs4;
+        {
+            FcChar8	    *src = sname->string;
+            int	    src_len = sname->string_len;
+            int	    olen;
+            FcChar8	    *u8;
+            FcChar32    ucs4;
 	
-	/*
-	 * Convert Latin1 to Utf8. Freed below
-	 */
-	utf8 = malloc (src_len * 2 + 1);
-	if (!utf8)
-	    return 0;
+            /*
+             * Convert Latin1 to Utf8. Freed below
+             */
+            utf8 = malloc (src_len * 2 + 1);
+            if (!utf8)
+                return 0;
 
-	u8 = utf8;
-	while (src_len > 0)
-	{
-	    ucs4 = *src++;
-	    src_len--;
-	    olen = FcUcs4ToUtf8 (ucs4, u8);
-	    u8 += olen;
-	}
-	*u8 = '\0';
-	goto done;
-    }
+            u8 = utf8;
+            while (src_len > 0)
+                {
+                    ucs4 = *src++;
+                    src_len--;
+                    olen = FcUcs4ToUtf8 (ucs4, u8);
+                    u8 += olen;
+                }
+            *u8 = '\0';
+            goto done;
+        }
     if (!strcmp (fromcode, FC_ENCODING_MAC_ROMAN))
-    {
-	FcChar8		*u8;
-	const FcCharMap	*map = FcFreeTypeGetPrivateMap (ft_encoding_apple_roman);
-	FcChar8		*src = (FcChar8 *) sname->string;
-	int		src_len = sname->string_len;
+        {
+            FcChar8		*u8;
+            const FcCharMap	*map = FcFreeTypeGetPrivateMap (ft_encoding_apple_roman);
+            FcChar8		*src = (FcChar8 *) sname->string;
+            int		src_len = sname->string_len;
 	
-	/*
-	 * Convert AppleRoman to Utf8
-	 */
-	if (!map)
-	    return 0;
+            /*
+             * Convert AppleRoman to Utf8
+             */
+            if (!map)
+                return 0;
+            
+            utf8 = malloc (sname->string_len * 3 + 1);
+            if (!utf8)
+                return 0;
 
-	utf8 = malloc (sname->string_len * 3 + 1);
-	if (!utf8)
-	    return 0;
-
-	u8 = utf8;
-	while (src_len > 0)
-	{
-	    FcChar32	ucs4 = FcFreeTypePrivateToUcs4 (*src++, map);
-	    int		olen = FcUcs4ToUtf8 (ucs4, u8);
-	    src_len--;
-	    u8 += olen;
-	}
-	*u8 = '\0';
-	goto done;
-    }
+            u8 = utf8;
+            while (src_len > 0)
+                {
+                    FcChar32	ucs4 = FcFreeTypePrivateToUcs4 (*src++, map);
+                    int		olen = FcUcs4ToUtf8 (ucs4, u8);
+                    src_len--;
+                    u8 += olen;
+                }
+            *u8 = '\0';
+            goto done;
+        }
 #if USE_ICONV
     cd = iconv_open ("UTF-8", fromcode);
     if (cd && cd != (iconv_t) (-1))
-    {
-	size_t	    in_bytes_left = sname->string_len;
-	size_t	    out_bytes_left = sname->string_len * FC_UTF8_MAX_LEN;
-	char	    *inbuf, *outbuf;
+        {
+            size_t	    in_bytes_left = sname->string_len;
+            size_t	    out_bytes_left = sname->string_len * FC_UTF8_MAX_LEN;
+            char	    *inbuf, *outbuf;
 	
-	utf8 = malloc (out_bytes_left + 1);
-	if (!utf8)
-	{
-	    iconv_close (cd);
-	    return 0;
-	}
+            utf8 = malloc (out_bytes_left + 1);
+            if (!utf8)
+                {
+                    iconv_close (cd);
+                    return 0;
+                }
 	
-	outbuf = (char *) utf8;
-	inbuf = (char *) sname->string;
+            outbuf = (char *) utf8;
+            inbuf = (char *) sname->string;
 	
-	while (in_bytes_left)
-	{
-	    size_t	did = iconv (cd,
-				 &inbuf, &in_bytes_left,
-				 &outbuf, &out_bytes_left);
-	    if (did == (size_t) (-1))
-	    {
-		iconv_close (cd);
-		free (utf8);
-		return 0;
-	    }
-	}
-    	iconv_close (cd);
-	*outbuf = '\0';
-	goto done;
-    }
+            while (in_bytes_left)
+                {
+                    size_t	did = iconv (cd,
+                                         &inbuf, &in_bytes_left,
+                                         &outbuf, &out_bytes_left);
+                    if (did == (size_t) (-1))
+                        {
+                            iconv_close (cd);
+                            free (utf8);
+                            return 0;
+                        }
+                }
+            iconv_close (cd);
+            *outbuf = '\0';
+            goto done;
+        }
 #endif
     return 0;
 done:
     if (FcStrCmpIgnoreBlanksAndCase (utf8, (FcChar8 *) "") == 0)
-    {
-	free (utf8);
-	return 0;
-    }
+        {
+            free (utf8);
+            return 0;
+        }
     return utf8;
 }
 
@@ -926,7 +930,7 @@ static const struct {
 #define NUM_VENDOR_FOUNDRIES	(int) (sizeof (FcVendorFoundries) / sizeof (FcVendorFoundries[0]))
 
 static const FcChar8 *
-FcVendorFoundry(const FT_Char vendor[4])
+FcVendorFoundry (const FT_Char vendor[4])
 {
     int i;
 
@@ -1099,14 +1103,18 @@ get_sfntname_table(const FT_Face face, FT_SfntName **table, int *table_length)
     *table = NULL;
 
     len = FT_Get_Sfnt_Name_Count (face);
-    tbl = malloc (sizeof (FT_SfntName) * len);
-    if (tbl != NULL) {
-        i = 0;
-        while (i < len && FT_Get_Sfnt_Name(face, i, &tbl[i]) == 0)
-            i++;
-        if (i == len) {
-            *table_length = len;
-            *table = tbl;
+    if (0 < len) {
+        tbl = malloc (sizeof (FT_SfntName) * len);
+        if (tbl != NULL) {
+            i = 0;
+            while (i < len && FT_Get_Sfnt_Name (face, i, &tbl[i]) == 0)
+                i++;
+            if (i == len) {
+                *table_length = len;
+                *table = tbl;
+            } else {
+                free (tbl);
+            }
         }
     }
 }
@@ -1179,7 +1187,7 @@ find_name_id(FT_SfntName *table, int language_start, int language_length, FT_USh
     i = 0;
     while (i < language_length && table[language_start + i].name_id < id)
         i++;
-    return table[language_start + i].name_id == id ? language_start + i : -1;
+    return (i < language_length && table[language_start + i].name_id == id) ? language_start + i : -1;
 }
 
 static FcChar8 *get_name_table_string(FT_SfntName *table, int language_start, int language_length, FT_UShort id)
@@ -1378,31 +1386,6 @@ find_best_platform(FT_SfntName *table, int table_length, int *start, int *length
         find_platform(table, table_length, 0xffff, start, length);
 }
 
-#if 0 /* These declarations are for the other Fontconfig. They are
-       * left here temporarily to help document the differences
-       * between the two Fontconfigs. */
-
-static const FT_UShort nameid_order[] = {
-#ifdef TT_NAME_ID_WWS_FAMILY
-    TT_NAME_ID_WWS_FAMILY,
-#endif
-    TT_NAME_ID_PREFERRED_FAMILY,
-    TT_NAME_ID_FONT_FAMILY,
-    TT_NAME_ID_MAC_FULL_NAME,
-    TT_NAME_ID_FULL_NAME,
-#ifdef TT_NAME_ID_WWS_SUBFAMILY
-    TT_NAME_ID_WWS_SUBFAMILY,
-#endif
-    TT_NAME_ID_PREFERRED_SUBFAMILY,
-    TT_NAME_ID_FONT_SUBFAMILY,
-    TT_NAME_ID_TRADEMARK,
-    TT_NAME_ID_MANUFACTURER,
-}
-
-#define NUM_NAMEID_ORDER  (sizeof (nameid_order) / sizeof (nameid_order[0]))
-
-#endif /* Declarations for the other Fontconfig. */
-
 FcPattern *
 FcFreeTypeQueryFace (const FT_Face  face,
 		     const FcChar8  *file,
@@ -1432,8 +1415,6 @@ FcFreeTypeQueryFace (const FT_Face  face,
 #endif
     TT_Header	    *head;
     const FcChar8   *exclusiveLang = 0;
-    FT_SfntName	    sname;
-    FT_UInt    	    snamei, snamec;
 
     int		    nfamily = 0;
     int		    nfamily_lang = 0;
@@ -1449,13 +1430,24 @@ FcFreeTypeQueryFace (const FT_Face  face,
     int		    nwwsstyle_lang = 0;
     int		    nfullname = 0;
     int		    nfullname_lang = 0;
-    int		    p, platform;
-    int		    n, nameid;
 
-    FcChar8	    *style = 0;
     int		    st;
 
     FcBool      preferred_is_wws;
+
+    FT_SfntName *table;
+    int table_length;
+    int platform_start;
+    int platform_length;
+    int encoding_start;
+    int encoding_length;
+    int language_start;
+    int language_length;
+    FcChar8 *family;
+    FcChar8 *style;
+    FcChar8 *s;
+    const FcChar8 *lang;
+    FcBool failed;
 
     pat = FcPatternCreate ();
     if (!pat)
@@ -1491,292 +1483,79 @@ FcFreeTypeQueryFace (const FT_Face  face,
     if (FcDebug () & FC_DBG_SCANV)
 	printf ("\n");
 
-#if 1                    /* Get strings from the sfnt "name" table. */
+    get_sfntname_table(face, &table, &table_length);
+    if (table != NULL) {
+        find_best_platform(table, table_length, &platform_start, &platform_length);
+        encoding_start = platform_start;
+        while (encoding_start < platform_start + platform_length) {
+            encoding_length = span_encoding(table, platform_start, platform_length, encoding_start);
+            language_start = encoding_start;
+            while (language_start < encoding_start + encoding_length) {
+                lang = FcSfntNameLanguage(&table[language_start]);
+                language_length = span_language(table, encoding_start, encoding_length, language_start);
 
-    {
-        FT_SfntName *table;
-        int table_length;
-        int platform_start;
-        int platform_length;
-        int encoding_start;
-        int encoding_length;
-        int language_start;
-        int language_length;
-        FT_UShort platform_id;
-        FcChar8 *family;
-        FcChar8 *style;
-        FcChar8 *s;
-        const FcChar8 *lang;
-        FcBool failed;
+                get_fourfont_family_and_style(table, language_start, language_length, &family, &style);
+                failed = add_font_string(pat, FC_FAMILY, FC_FAMILYLANG, family, lang, &nfamily, &nfamily_lang);
+                if (!failed)
+                    failed = add_font_string(pat, FC_STYLE, FC_STYLELANG, style, lang, &nstyle, &nstyle_lang);
+                free(family);
+                free(style);
+                if (failed)
+                    goto bail1;
 
-        get_sfntname_table(face, &table, &table_length);
-        if (table != NULL) {
-            find_best_platform(table, table_length, &platform_start, &platform_length);
-            encoding_start = platform_start;
-            while (encoding_start < platform_start + platform_length) {
-                encoding_length = span_encoding(table, platform_start, platform_length, encoding_start);
-                language_start = encoding_start;
-                while (language_start < encoding_start + encoding_length) {
-                    lang = FcSfntNameLanguage(&table[language_start]);
-                    language_length = span_language(table, encoding_start, encoding_length, language_start);
+                get_preferred_family_and_style(table, language_start, language_length, &family, &style);
+                failed = add_font_string(pat, FC_PREFERRED_FAMILY, FC_PREFERRED_FAMILYLANG,
+                                         family, lang, &npreferredfamily, &npreferredfamily_lang);
+                if (!failed)
+                    failed = add_font_string(pat, FC_PREFERRED_STYLE, FC_PREFERRED_STYLELANG,
+                                             style, lang, &npreferredstyle, &npreferredstyle_lang);
+                free(family);
+                free(style);
+                if (failed)
+                    goto bail1;
 
-                    get_fourfont_family_and_style(table, language_start, language_length, &family, &style);
-                    failed = add_font_string(pat, FC_FAMILY, FC_FAMILYLANG, family, lang, &nfamily, &nfamily_lang);
-                    if (!failed)
-                        failed = add_font_string(pat, FC_STYLE, FC_STYLELANG, style, lang, &nstyle, &nstyle_lang);
-                    free(family);
-                    free(style);
-                    if (failed)
-                        goto bail1;
+                get_wws_family_and_style(table, language_start, language_length,
+                                         preferred_is_wws, &family, &style);
+                failed = add_font_string(pat, FC_WWS_FAMILY, FC_WWS_FAMILYLANG,
+                                         family, lang, &nwwsfamily, &nwwsfamily_lang);
+                if (!failed)
+                    failed = add_font_string(pat, FC_WWS_STYLE, FC_WWS_STYLELANG,
+                                             style, lang, &nwwsstyle, &nwwsstyle_lang);
+                free(family);
+                free(style);
+                if (failed)
+                    goto bail1;
 
-                    get_preferred_family_and_style(table, language_start, language_length, &family, &style);
-                    failed = add_font_string(pat, FC_PREFERRED_FAMILY, FC_PREFERRED_FAMILYLANG,
-                                             family, lang, &npreferredfamily, &npreferredfamily_lang);
-                    if (!failed)
-                        failed = add_font_string(pat, FC_PREFERRED_STYLE, FC_PREFERRED_STYLELANG,
-                                                 style, lang, &npreferredstyle, &npreferredstyle_lang);
-                    free(family);
-                    free(style);
-                    if (failed)
-                        goto bail1;
+                s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_MAC_FULL_NAME);
+                failed = add_font_string(pat, FC_FULLNAME, FC_FULLNAMELANG,
+                                         s, lang, &nfullname, &nfullname_lang);
+                free(s);
+                if (failed)
+                    goto bail1;
 
-                    get_wws_family_and_style(table, language_start, language_length,
-                                             preferred_is_wws, &family, &style);
-                    failed = add_font_string(pat, FC_WWS_FAMILY, FC_WWS_FAMILYLANG,
-                                             family, lang, &nwwsfamily, &nwwsfamily_lang);
-                    if (!failed)
-                        failed = add_font_string(pat, FC_WWS_STYLE, FC_WWS_STYLELANG,
-                                                 style, lang, &nwwsstyle, &nwwsstyle_lang);
-                    free(family);
-                    free(style);
-                    if (failed)
-                        goto bail1;
+                s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_FULL_NAME);
+                failed = add_font_string(pat, FC_FULLNAME, FC_FULLNAMELANG,
+                                         s, lang, &nfullname, &nfullname_lang);
+                free(s);
+                if (failed)
+                    goto bail1;
 
-                    s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_MAC_FULL_NAME);
-                    failed = add_font_string(pat, FC_FULLNAME, FC_FULLNAMELANG,
-                                             s, lang, &nfullname, &nfullname_lang);
-                    free(s);
-                    if (failed)
-                        goto bail1;
-
-                    s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_FULL_NAME);
-                    failed = add_font_string(pat, FC_FULLNAME, FC_FULLNAMELANG,
-                                             s, lang, &nfullname, &nfullname_lang);
-                    free(s);
-                    if (failed)
-                        goto bail1;
-
-                    if (foundry == NULL) {
-                        s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_TRADEMARK);
-                        if (s == NULL)
-                            s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_MANUFACTURER);
-                        if (s != NULL) {
-                            foundry = FcNoticeFoundry((FT_String *) s);
-                            free(s);
-                        }
+                if (foundry == NULL) {
+                    s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_TRADEMARK);
+                    if (s == NULL)
+                        s = get_name_table_string(table, language_start, language_length, TT_NAME_ID_MANUFACTURER);
+                    if (s != NULL) {
+                        foundry = FcNoticeFoundry((FT_String *) s);
+                        free(s);
                     }
-                        
-                    language_start += language_length;
                 }
-                encoding_start += encoding_length;
+
+                language_start += language_length;
             }
+            encoding_start += encoding_length;
         }
-        free(table);
     }
-
-#else  /* The way the other Fontconfig deals with font names. This
-        * dead code is retained here (for the moment) to document Crud
-        * Factory Fontconfig's changes. */
-
-    /*
-     * Grub through the name table looking for family and style names.
-     * FreeType makes quite a hash of them.
-     *
-     * (Nonsense. FreeType is doing the right thing. The hash is all
-     * fontconfig's.
-     *
-     * Here's the deal. First a minor issue: including names for
-     * multiple platforms might be okay, but, nevertheless, increases
-     * the opportunities for confusion. Names for a Microsoft platform
-     * are appropriate and sufficient for interactive programs on most
-     * Unix-like systems. So what one might do is try platforms,
-     * starting with Microsoft and working downwards in priority,
-     * until one platform is found in the name table; then work with
-     * that platform's entries only.
-     *
-     * Now, a major issue: Family-Subfamily pairs are completely
-     * mishandled here. They must be retained _as pairs_ and we must
-     * retain information about _what kinds_ of pairs they are:
-     * four-style family, preferred, or WWS. It is not correct to put
-     * preferred names first, etc; this mistake is part of why GIMP
-     * makes a complete botch of complicated font families. The
-     * different kinds of family-subfamily pairs are not alternatives
-     * to each other; rather, they are different systems. An
-     * interactive program should use only one of the systems, not a
-     * pile of names with the families and subfamilies separated --
-     * with the names _least likely_ to be supported at the top of the
-     * pile! Batch programs at least need to know family-subfamily in
-     * pairs.
-     *
-     * If fonts are not to be gathered into families, then fullnames
-     * can form another system; in that case there would be no
-     * subfamilies. This is what GIMP with its current UI probably
-     * should be doing, because it simply lists fonts rather than
-     * group them into families. Any one of the other systems would
-     * work, too.
-     *
-     * Pattern matching as such is a fine thing, but chopping up and
-     * shuffling the material before attempting to match with it is
-     * silly.
-     *
-     * -- bs, 2010.05.29)
-     */
-    snamec = FT_Get_Sfnt_Name_Count (face);
-    for (p = 0; p <= NUM_PLATFORM_ORDER; p++)
-    {
-	if (p < NUM_PLATFORM_ORDER)
-	    platform = platform_order[p];
-	else
-	    platform = 0xffff;
-
-	/*
-	 * Order nameids so preferred names appear first
-	 * in the resulting list
-	 */
-	for (n = 0; n < NUM_NAMEID_ORDER; n++)
-	{
-	    nameid = nameid_order[n];
-
-	    for (snamei = 0; snamei < snamec; snamei++)
-	    {
-		FcChar8		*utf8;
-		const FcChar8	*lang;
-		const char	*elt = 0, *eltlang = 0;
-		int		*np = 0, *nlangp = 0;
-
-		if (FT_Get_Sfnt_Name (face, snamei, &sname) != 0)
-		    continue;
-		if (sname.name_id != nameid)
-		    continue;
-
-		/*
-		 * Sort platforms in preference order, accepting
-		 * all other platforms last
-		 */
-		if (p < NUM_PLATFORM_ORDER)
-		{
-		    if (sname.platform_id != platform)
-			continue;
-		}
-		else
-		{
-		    int	    sp;
-
-		    for (sp = 0; sp < NUM_PLATFORM_ORDER; sp++)
-			if (sname.platform_id == platform_order[sp])
-			    break;
-		    if (sp != NUM_PLATFORM_ORDER)
-			continue;
-		}
-		utf8 = FcSfntNameTranscode (&sname);
-		lang = FcSfntNameLanguage (&sname);
-
-		if (!utf8)
-		    continue;
-
-		switch (sname.name_id) {
-#ifdef TT_NAME_ID_WWS_FAMILY
-		case TT_NAME_ID_WWS_FAMILY:
-#endif
-		case TT_NAME_ID_PREFERRED_FAMILY:
-		case TT_NAME_ID_FONT_FAMILY:
-#if 0	
-		case TT_NAME_ID_PS_NAME:
-		case TT_NAME_ID_UNIQUE_ID:
-#endif
-		    if (FcDebug () & FC_DBG_SCANV)
-			printf ("found family (n %2d p %d e %d l 0x%04x) %s\n",
-				sname.name_id, sname.platform_id,
-				sname.encoding_id, sname.language_id,
-				utf8);
-
-		    elt = FC_FAMILY;
-		    eltlang = FC_FAMILYLANG;
-		    np = &nfamily;
-		    nlangp = &nfamily_lang;
-		    break;
-		case TT_NAME_ID_MAC_FULL_NAME:
-		case TT_NAME_ID_FULL_NAME:
-		    if (FcDebug () & FC_DBG_SCANV)
-			printf ("found full   (n %2d p %d e %d l 0x%04x) %s\n",
-				sname.name_id, sname.platform_id,
-				sname.encoding_id, sname.language_id,
-				utf8);
-
-		    elt = FC_FULLNAME;
-		    eltlang = FC_FULLNAMELANG;
-		    np = &nfullname;
-		    nlangp = &nfullname_lang;
-		    break;
-#ifdef TT_NAME_ID_WWS_SUBFAMILY
-		case TT_NAME_ID_WWS_SUBFAMILY:
-#endif
-		case TT_NAME_ID_PREFERRED_SUBFAMILY:
-		case TT_NAME_ID_FONT_SUBFAMILY:
-		    if (FcDebug () & FC_DBG_SCANV)
-			printf ("found style  (n %2d p %d e %d l 0x%04x) %s\n",
-				sname.name_id, sname.platform_id,
-				sname.encoding_id, sname.language_id,
-				utf8);
-
-		    elt = FC_STYLE;
-		    eltlang = FC_STYLELANG;
-		    np = &nstyle;
-		    nlangp = &nstyle_lang;
-		    break;
-		case TT_NAME_ID_TRADEMARK:
-		case TT_NAME_ID_MANUFACTURER:
-		    /* If the foundry wasn't found in the OS/2 table, look here */
-		    if(!foundry)
-			foundry = FcNoticeFoundry((FT_String *) utf8);
-		    break;
-		}
-		if (elt)
-		{
-		    if (FcStringInPatternElement (pat, elt, utf8))
-		    {
-			free (utf8);
-			continue;
-		    }
-
-		    /* add new element */
-		    if (!FcPatternAddString (pat, elt, utf8))
-		    {
-			free (utf8);
-			goto bail1;
-		    }
-		    free (utf8);
-		    if (lang)
-		    {
-			/* pad lang list with 'xx' to line up with elt */
-			while (*nlangp < *np)
-			{
-			    if (!FcPatternAddString (pat, eltlang, (FcChar8 *) "xx"))
-				goto bail1;
-			    ++*nlangp;
-			}
-			if (!FcPatternAddString (pat, eltlang, lang))
-			    goto bail1;
-			++*nlangp;
-		    }
-		    ++*np;
-		}
-		else
-		    free (utf8);
-	    }
-	}
-    }
-#endif  /* The other Fontconfig's code. */
+    free(table);
 
     if (!nfamily && face->family_name &&
 	FcStrCmpIgnoreBlanksAndCase ((FcChar8 *) face->family_name, (FcChar8 *) "") != 0)
