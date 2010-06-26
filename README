@@ -10,5 +10,49 @@ Differences from freedesktop.org Fontconfig:
               <name>style</name>
           </priority>
 
+      The default duplicates the hardcoded settings of freedesktop.org
+      Fontconfig 2.8:
+
+          <priority>
+              <name>foundry</name>
+              <name>charset</name>
+              <name>family</name>
+              <name>lang</name>
+              <name>family</name>
+              <name>spacing</name>
+              <name>pixelsize</name>
+              <name>style</name>
+              <name>slant</name>
+              <name>weight</name>
+              <name>width</name>
+              <name>decorative</name>
+              <name>antialias</name>
+              <name>rasterizer</name>
+              <name>outline</name>
+              <name>fontversion</name>
+          </priority>
+
     * Preferred family/style and WWS family/style are kept distinct
-      from the "normal" family/style and each other.
+      from the "normal" family/style and each other. By default one
+      works with the "normal" family/style. To work with WWS family/style instead, try
+
+          <match target="scan">
+              <test name="wwsfamily" compare="not_eq" target="font"><string></string></test>
+              <edit mode="assign" name="family"><name>wwsfamily</name></edit>
+              <test name="wwsstyle" compare="not_eq" target="font"><string></string></test>
+              <edit mode="assign" name="style"><name>wwsstyle</name></edit>
+          </match>
+
+      This will cause family/style to be replaced with WWS
+      family/style at scan time. For almost all current fonts (in the
+      year 2010) this won't make any difference. What would make a
+      difference is to use the preferred family/style instead of the
+      WWS values; unfortunately GIMP, Inkscape, and probably many
+      other programs would end up severely broken, because they make
+      assumptions about font names that do not apply to preferred
+      names.
+
+      (Freedesktop.org Fontconfig even more severely breaks these
+      programs, because it not only uses preferred names but also
+      transforms names and styles into whimsical combinations that
+      sometimes are identical to the actual names of other fonts.)
