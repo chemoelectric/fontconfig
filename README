@@ -56,9 +56,12 @@ Differences from freedesktop.org Fontconfig:
       WWS values; unfortunately GIMP, Inkscape, and probably many
       other programs would end up severely broken, because they make
       assumptions about font names that do not apply to preferred
-      names.
+      names. Indeed, the frequently used free software library, Pango,
+      employs an abstract model of fonts that, if not augmented,
+      is incompatible with preferred names.
 
-      (Freedesktop.org Fontconfig even more severely breaks these
-      programs, because it not only uses preferred names but also
-      transforms names and styles into whimsical combinations that
-      sometimes are identical to the actual names of other fonts.)
+      (Freedesktop.org Fontconfig's font matcher not only employs
+       preferred names, thus breaking all Pango-based programs, but
+       freely mixes preferred family with "normal" style, WWS style
+       with preferred family, and so on. Choosing fonts from large,
+       complex families becomes like the spin of a roulette wheel.)
