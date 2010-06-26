@@ -71,8 +71,8 @@ typedef int		FcBool;
  * it'a a pain to synchronize version numbers like this.
  */
 
-#define FC_MAJOR	2
-#define FC_MINOR	8
+#define FC_MAJOR	10
+#define FC_MINOR	0
 #define FC_REVISION	0
 
 #define FC_VERSION	((FC_MAJOR * 10000) + (FC_MINOR * 100) + (FC_REVISION))

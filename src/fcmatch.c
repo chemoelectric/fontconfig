@@ -295,9 +295,15 @@ static const FcMatcher *
 FcObjectToMatcher (FcObject object)
 {
     int i;
+    FcMatcher *matcher;
 
-    i = matcher_index[object];
-    return (0 < i) ? &_FcMatchers[i] : NULL;
+    matcher = NULL;
+    if (0 <= object && object <= FC_MAX_BASE_OBJECT) {
+        i = matcher_index[object];
+        if (0 <= i)
+            matcher = &_FcMatchers[i];
+    }
+    return matcher;
 }
 
 static FcBool
