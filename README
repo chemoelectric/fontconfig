@@ -33,8 +33,14 @@ Differences from freedesktop.org Fontconfig:
           </priority>
 
     * Preferred family/style and WWS family/style are kept distinct
-      from the "normal" family/style and each other. By default one
-      works with the "normal" family/style. To work with WWS family/style instead, try
+      from the "normal" family/style and each other. For
+      TrueType/OpenType fonts, the preferred names and/or WWS names
+      need not be explicitly present in the font; Crud Factory
+      Fontconfig will use fallback values. Thus, very often, the
+      "normal", "preferred", and "WWS" names are the same.
+
+      By default one works with the "normal" family/style. To work
+      with WWS family/style instead, try
 
           <match target="scan">
               <test name="wwsfamily" compare="not_eq" target="font"><string></string></test>
