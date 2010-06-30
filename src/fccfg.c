@@ -44,6 +44,8 @@ FcConfigCreate (void)
     FcSetName	set;
     FcConfig	*config;
 
+    FcInitMatchers ();
+
     config = malloc (sizeof (FcConfig));
     if (!config)
 	goto bail0;
@@ -96,6 +98,8 @@ FcConfigCreate (void)
     config->expr_pool = NULL;
 
     config->ref = 1;
+
+    FcInitPriorities (config, NULL, 0);
 
     return config;
 

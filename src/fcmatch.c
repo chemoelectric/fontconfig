@@ -245,17 +245,22 @@ static FcMatcher _FcMatchers [] = {
 #define NUM_MATCH_VALUES (2 * NUM_MATCHERS)
 
 static int matcher_index[FC_MAX_BASE_OBJECT + 1];
+static int matchers_initialized = 0;
 
 void
 FcInitMatchers (void)
 {
     int i;
 
-    for (i = 0;  i <= FC_MAX_BASE_OBJECT;  i++)
-        matcher_index[i] = -1;
+    if (!matchers_initialized) {
+        matchers_initialized = 1;
 
-    for (i = 0;  i < NUM_MATCHERS;  i++)
-        matcher_index[_FcMatchers[i].object] = i;
+        for (i = 0;  i <= FC_MAX_BASE_OBJECT;  i++)
+            matcher_index[i] = -1;
+
+        for (i = 0;  i < NUM_MATCHERS;  i++)
+            matcher_index[_FcMatchers[i].object] = i;
+    }
 }
 
 void
