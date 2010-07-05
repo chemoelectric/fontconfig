@@ -721,6 +721,13 @@ FcFontSetSort (FcConfig	    *config,
     FcBool    	    *patternLangSat;
     FcValue	    patternLang;
 
+    if (!config)
+    {
+	config = FcConfigGetCurrent ();
+	if (!config)
+	    goto bail0;
+    }
+
     if (FcDebug () & FC_DBG_MATCH)
     {
 	printf ("Sort ");
